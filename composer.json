@@ -1,28 +1,63 @@
 {
-    "name": "phporbit/php-email-validator",
-    "description": "PHP email validation library to check format, disposable emails, and MX records.",
+    "name": "harungecit/php-email-validator",
+    "description": "A comprehensive PHP email validation library to check format, detect disposable emails, validate MX records, and support batch validation.",
     "type": "library",
-    "version": "1.0.2",
+    "version": "2.0.0",
+    "keywords": [
+        "email",
+        "validation",
+        "validator",
+        "disposable",
+        "email-validator",
+        "mx-record",
+        "php",
+        "email-verification",
+        "spam-protection",
+        "blocklist",
+        "allowlist"
+    ],
+    "homepage": "https://github.com/harungecit/php-email-validator",
     "require": {
-        "php": ">=7.4"
+        "php": ">=7.4",
+        "ext-filter": "*"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.5 || ^10.0 || ^11.0 || ^12.0"
     },
     "license": "MIT",
     "autoload": {
         "psr-4": {
-            "PHPOrbit\\EmailValidator\\": "src/"
+            "HarunGecit\\EmailValidator\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "HarunGecit\\EmailValidator\\Tests\\": "tests/"
         }
     },
     "authors": [
         {
-            "name": "Harun Geçit @ PHPOrbit",
-            "email": "info@harungecit.com"
+            "name": "Harun Geçit",
+            "email": "info@harungecit.com",
+            "homepage": "https://harungecit.com",
+            "role": "Developer"
         }
     ],
-    "minimum-stability": "stable",
-    "require-dev": {
-        "phpunit/phpunit": "^9.5 || ^10.0 || ^11.0"
+    "support": {
+        "issues": "https://github.com/harungecit/php-email-validator/issues",
+        "source": "https://github.com/harungecit/php-email-validator"
     },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
     "scripts": {
-        "test": "php vendor/bin/phpunit tests"
+        "test": "phpunit tests",
+        "test-coverage": "phpunit tests --coverage-html coverage"
+    },
+    "config": {
+        "sort-packages": true,
+        "optimize-autoloader": true
+    },
+    "suggest": {
+        "ext-intl": "For internationalized domain name (IDN) support"
     }
 }

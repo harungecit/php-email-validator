@@ -1,0 +1,31 @@
+{
+    "project": {
+        "name": "php-email-validator",
+        "type": "php-library",
+        "language": "php",
+        "minPhpVersion": "7.4",
+        "namespace": "HarunGecit\\EmailValidator",
+        "author": "Harun Geçit",
+        "currentVersion": "2.0.0"
+    },
+    "paths": {
+        "source": "src/",
+        "tests": "tests/",
+        "data": "data/",
+        "examples": "examples/"
+    },
+    "files": {
+        "main": "src/EmailValidator.php",
+        "fetcher": "src/Fetcher.php",
+        "blocklist": "data/blocklist.conf",
+        "allowlist": "data/allowlist.conf"
+    },
+    "commands": {
+        "test": "composer test",
+        "testCoverage": "composer test-coverage"
+    },
+    "ci": {
+        "phpVersions": ["7.4", "8.0", "8.1", "8.2", "8.3", "8.4", "8.5"],
+        "platforms": ["ubuntu-latest", "windows-latest", "macos-latest"]
+    }
+}
