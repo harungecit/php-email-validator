@@ -2,7 +2,6 @@
     "name": "harungecit/php-email-validator",
     "description": "A comprehensive PHP email validation library to check format, detect disposable emails, validate MX records, and support batch validation.",
     "type": "library",
-    "version": "2.0.0",
     "keywords": [
         "email",
         "validation",
