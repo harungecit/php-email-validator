@@ -2,6 +2,21 @@
 
 This document serves as Claude's reference for understanding and maintaining this project.
 
+## Rules for Claude
+
+**IMPORTANT - Git Operations:**
+- **NEVER** run `git commit` - only show the command to the user
+- **NEVER** run `git push` - only show the command to the user
+- **NEVER** run `git tag` with push - only show the command to the user
+- Always show git commands as text/code blocks for user to review and execute manually
+- User will handle all git operations themselves
+
+**Code Changes:**
+- Always run tests after making changes
+- Update version in composer.json when releasing
+- Update CHANGELOG in README.md
+- Update this documentation for major changes
+
 ## Project Overview
 
 **Name:** harungecit/php-email-validator
