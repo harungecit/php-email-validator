@@ -29,58 +29,50 @@ class EmailValidatorTest extends TestCase
     // Format Validation Tests
     // ========================================
 
-    /**
-     * @dataProvider validEmailFormatProvider
-     */
-    public function testValidEmailFormats(string $email): void
+    public function testValidEmailFormats(): void
     {
-        $this->assertTrue(
-            $this->validator->isValidFormat($email),
-            "Email '{$email}' should have a valid format"
-        );
-    }
-
-    public static function validEmailFormatProvider(): array
-    {
-        return [
-            'simple email' => ['user@example.com'],
-            'with subdomain' => ['user@mail.example.com'],
-            'with plus sign' => ['user+tag@example.com'],
-            'with dots in local part' => ['first.last@example.com'],
-            'with numbers' => ['user123@example.com'],
-            'numeric local part' => ['123456@example.com'],
-            'short domain' => ['user@ex.co'],
-            'with hyphen in domain' => ['user@my-domain.com'],
-            'uppercase' => ['USER@EXAMPLE.COM'],
-            'mixed case' => ['User@Example.Com'],
+        $validEmails = [
+            'user@example.com',
+            'user@mail.example.com',
+            'user+tag@example.com',
+            'first.last@example.com',
+            'user123@example.com',
+            '123456@example.com',
+            'user@ex.co',
+            'user@my-domain.com',
+            'USER@EXAMPLE.COM',
+            'User@Example.Com',
         ];
+
+        foreach ($validEmails as $email) {
+            $this->assertTrue(
+                $this->validator->isValidFormat($email),
+                "Email '{$email}' should have a valid format"
+            );
+        }
     }
 
-    /**
-     * @dataProvider invalidEmailFormatProvider
-     */
-    public function testInvalidEmailFormats(string $email): void
+    public function testInvalidEmailFormats(): void
     {
-        $this->assertFalse(
-            $this->validator->isValidFormat($email),
-            "Email '{$email}' should have an invalid format"
-        );
-    }
-
-    public static function invalidEmailFormatProvider(): array
-    {
-        return [
-            'no at sign' => ['userexample.com'],
-            'no domain' => ['user@'],
-            'no local part' => ['@example.com'],
-            'double at' => ['user@@example.com'],
-            'spaces' => ['user @example.com'],
-            'plain text' => ['invalid-email'],
-            'empty string' => [''],
-            'just domain' => ['example.com'],
-            'missing tld' => ['user@example'],
-            'special chars' => ['user<>@example.com'],
+        $invalidEmails = [
+            'userexample.com',
+            'user@',
+            '@example.com',
+            'user@@example.com',
+            'user @example.com',
+            'invalid-email',
+            '',
+            'example.com',
+            'user@example',
+            'user<>@example.com',
         ];
+
+        foreach ($invalidEmails as $email) {
+            $this->assertFalse(
+                $this->validator->isValidFormat($email),
+                "Email '{$email}' should have an invalid format"
+            );
+        }
     }
 
     public function testEmptyEmailIsInvalid(): void
@@ -92,55 +84,47 @@ class EmailValidatorTest extends TestCase
     // Disposable Email Detection Tests
     // ========================================
 
-    /**
-     * @dataProvider disposableEmailProvider
-     */
-    public function testDisposableEmails(string $email): void
+    public function testDisposableEmails(): void
     {
-        $this->assertTrue(
-            $this->validator->isDisposable($email),
-            "Email '{$email}' should be detected as disposable"
-        );
-    }
-
-    public static function disposableEmailProvider(): array
-    {
-        return [
-            'mailinator' => ['test@mailinator.com'],
-            'guerrillamail' => ['test@guerrillamail.com'],
-            'tempmail' => ['test@tempmail.com'],
-            'yopmail' => ['test@yopmail.com'],
-            '10minutemail' => ['test@10minutemail.com'],
-            'throwawaymail' => ['test@throwawaymail.com'],
-            'fakeinbox' => ['test@fakeinbox.com'],
-            'sharklasers' => ['test@sharklasers.com'],
-            'getnada' => ['test@getnada.com'],
-            'temp-mail' => ['test@temp-mail.org'],
+        $disposableEmails = [
+            'test@mailinator.com',
+            'test@guerrillamail.com',
+            'test@tempmail.com',
+            'test@yopmail.com',
+            'test@10minutemail.com',
+            'test@throwawaymail.com',
+            'test@fakeinbox.com',
+            'test@sharklasers.com',
+            'test@getnada.com',
+            'test@temp-mail.org',
         ];
+
+        foreach ($disposableEmails as $email) {
+            $this->assertTrue(
+                $this->validator->isDisposable($email),
+                "Email '{$email}' should be detected as disposable"
+            );
+        }
     }
 
-    /**
-     * @dataProvider nonDisposableEmailProvider
-     */
-    public function testNonDisposableEmails(string $email): void
+    public function testNonDisposableEmails(): void
     {
-        $this->assertFalse(
-            $this->validator->isDisposable($email),
-            "Email '{$email}' should not be detected as disposable"
-        );
-    }
-
-    public static function nonDisposableEmailProvider(): array
-    {
-        return [
-            'gmail' => ['user@gmail.com'],
-            'outlook' => ['user@outlook.com'],
-            'yahoo' => ['user@yahoo.com'],
-            'example.com' => ['user@example.com'],
-            'custom domain' => ['user@mycompany.com'],
-            'protonmail' => ['user@protonmail.com'],
-            'icloud' => ['user@icloud.com'],
+        $nonDisposableEmails = [
+            'user@gmail.com',
+            'user@outlook.com',
+            'user@yahoo.com',
+            'user@example.com',
+            'user@mycompany.com',
+            'user@protonmail.com',
+            'user@icloud.com',
         ];
+
+        foreach ($nonDisposableEmails as $email) {
+            $this->assertFalse(
+                $this->validator->isDisposable($email),
+                "Email '{$email}' should not be detected as disposable"
+            );
+        }
     }
 
     public function testDisposableEmailCaseInsensitive(): void
@@ -155,7 +139,6 @@ class EmailValidatorTest extends TestCase
 
     public function testValidMXRecord(): void
     {
-        // Using google.com which should always have valid MX records
         $this->assertTrue(
             $this->validator->hasValidMX('user@google.com'),
             'Google.com should have valid MX records'
@@ -164,7 +147,6 @@ class EmailValidatorTest extends TestCase
 
     public function testInvalidMXRecord(): void
     {
-        // Using a domain that definitely doesn't exist
         $this->assertFalse(
             $this->validator->hasValidMX('user@thisdomain-definitely-does-not-exist-12345.com'),
             'Non-existent domain should not have MX records'
@@ -176,10 +158,7 @@ class EmailValidatorTest extends TestCase
         $validator = new EmailValidator([], []);
         $validator->setCacheEnabled(true);
 
-        // First call
         $result1 = $validator->hasValidMX('user@google.com');
-
-        // Second call should use cache
         $result2 = $validator->hasValidMX('user@google.com');
 
         $this->assertEquals($result1, $result2);
@@ -191,7 +170,6 @@ class EmailValidatorTest extends TestCase
         $validator->hasValidMX('user@google.com');
         $validator->clearCache();
 
-        // This should not throw any errors after cache clear
         $this->assertTrue($validator->hasValidMX('user@google.com'));
     }
 
@@ -201,7 +179,6 @@ class EmailValidatorTest extends TestCase
 
     public function testIsValidWithAllChecks(): void
     {
-        // Valid email with MX check
         $this->assertTrue(
             $this->validator->isValid('user@google.com', true),
             'Valid email with MX should pass'
@@ -251,16 +228,13 @@ class EmailValidatorTest extends TestCase
         $this->assertArrayHasKey('invalid-email', $results);
         $this->assertArrayHasKey('disposable@mailinator.com', $results);
 
-        // Check valid email
         $this->assertTrue($results['valid@example.com']['valid']);
         $this->assertTrue($results['valid@example.com']['format']);
         $this->assertFalse($results['valid@example.com']['disposable']);
 
-        // Check invalid format
         $this->assertFalse($results['invalid-email']['valid']);
         $this->assertFalse($results['invalid-email']['format']);
 
-        // Check disposable
         $this->assertFalse($results['disposable@mailinator.com']['valid']);
         $this->assertTrue($results['disposable@mailinator.com']['disposable']);
     }
@@ -404,13 +378,10 @@ class EmailValidatorTest extends TestCase
     {
         $validator = new EmailValidator(['test-domain.com'], []);
 
-        // Initially disposable
         $this->assertTrue($validator->isDisposable('test@test-domain.com'));
 
-        // Add to allowlist
         $validator->addToAllowlist('test-domain.com');
 
-        // Now should not be disposable
         $this->assertFalse($validator->isDisposable('test@test-domain.com'));
     }
 
