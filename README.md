@@ -1,6 +1,18 @@
 # HarunGecit/php-email-validator
 
+[![PHP Version](https://img.shields.io/packagist/php-v/harungecit/php-email-validator?style=flat-square&logo=php&logoColor=white)](https://packagist.org/packages/harungecit/php-email-validator)
+[![Latest Version](https://img.shields.io/packagist/v/harungecit/php-email-validator?style=flat-square&logo=packagist&logoColor=white&label=version)](https://packagist.org/packages/harungecit/php-email-validator)
+[![Total Downloads](https://img.shields.io/packagist/dt/harungecit/php-email-validator?style=flat-square&logo=packagist&logoColor=white)](https://packagist.org/packages/harungecit/php-email-validator)
+[![License](https://img.shields.io/packagist/l/harungecit/php-email-validator?style=flat-square&logo=opensource&logoColor=white)](LICENSE)
+[![CI Status](https://img.shields.io/github/actions/workflow/status/harungecit/php-email-validator/ci.yml?branch=main&style=flat-square&logo=github&logoColor=white&label=tests)](https://github.com/harungecit/php-email-validator/actions)
+[![Code Quality](https://img.shields.io/badge/code%20quality-A-brightgreen?style=flat-square&logo=codacy&logoColor=white)]()
+[![Maintenance](https://img.shields.io/badge/maintained-yes-green?style=flat-square&logo=git&logoColor=white)]()
+
 A comprehensive PHP email validation library for checking email format, detecting disposable email addresses, validating MX records, and batch email processing.
+
+[![Blocklist Domains](https://img.shields.io/badge/blocklist-4,900%2B%20domains-red?style=flat-square&logo=shield&logoColor=white)]()
+[![Allowlist Domains](https://img.shields.io/badge/allowlist-180%2B%20domains-green?style=flat-square&logo=shield&logoColor=white)]()
+[![Platform Support](https://img.shields.io/badge/platform-Linux%20%7C%20Windows%20%7C%20macOS-blue?style=flat-square&logo=windows&logoColor=white)]()
 
 ---
 
