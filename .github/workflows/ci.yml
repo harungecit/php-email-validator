@@ -19,7 +19,10 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        php-version: ['7.4', '8.0', '8.1', '8.2', '8.3', '8.4', '8.5']
+        # The library itself supports PHP >= 8.0 (see php80-compat job below).
+        # The test toolchain (PHPUnit >= 10, which the attribute-based tests
+        # require) needs PHP >= 8.1, so the full suite runs from 8.1 upwards.
+        php-version: ['8.1', '8.2', '8.3', '8.4', '8.5']
         exclude:
           # PHP 8.5 may not be available on all platforms yet
           - os: windows-latest
@@ -42,22 +45,44 @@ jobs:
       - name: Validate composer.json
         run: composer validate --strict
 
-      - name: Cache Composer packages
-        id: composer-cache
-        uses: actions/cache@v4
-        with:
-          path: vendor
-          key: ${{ runner.os }}-php-${{ matrix.php-version }}-${{ hashFiles('**/composer.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-php-${{ matrix.php-version }}-
-
       - name: Install dependencies
-        run: composer install --no-progress --prefer-dist --optimize-autoloader
+        run: composer update --no-progress --prefer-dist --optimize-autoloader
 
       - name: Run Tests
         run: composer test
         env:
           XDEBUG_MODE: coverage
+
+  php80-compat:
+    name: PHP 8.0 runtime compatibility
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 8.0
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.0'
+          extensions: mbstring, json, intl, filter
+          tools: composer:v2
+
+      # The dev toolchain (PHPUnit >= 10) requires PHP 8.1, so on 8.0 we only
+      # verify that the runtime package installs, lints and autoloads cleanly.
+      - name: Install runtime dependencies only
+        run: composer update --no-dev --no-progress --prefer-dist
+
+      - name: Check PHP syntax (runtime sources)
+        run: find src -name "*.php" -not -path "src/Framework/*" -exec php -l {} \;
+
+      - name: Smoke test autoload
+        run: |
+          php -r 'require "vendor/autoload.php";
+            $v = new HarunGecit\EmailValidator\EmailValidator();
+            $count = count(HarunGecit\EmailValidator\Fetcher::loadBlocklist());
+            if ($count < 1) { fwrite(STDERR, "blocklist empty\n"); exit(1); }
+            echo "OK: EmailValidator loads on PHP " . PHP_VERSION . ", blocklist has {$count} domains\n";'
 
   code-quality:
     name: Code Quality
@@ -75,7 +100,7 @@ jobs:
           tools: composer:v2
 
       - name: Install dependencies
-        run: composer install --no-progress --prefer-dist
+        run: composer update --no-progress --prefer-dist
 
       - name: Check PHP syntax
         run: find src tests -name "*.php" -exec php -l {} \;

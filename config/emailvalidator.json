@@ -1,0 +1,50 @@
+{
+    "checks": {
+        "format": true,
+        "mx": true,
+        "disposable": true,
+        "role_based": false,
+        "smtp": false,
+        "typo_suggestion": true,
+        "subaddress": false,
+        "catch_all": false
+    },
+    "cache": {
+        "driver": "memory",
+        "ttl": 3600,
+        "prefix": "email_validator_",
+        "options": {}
+    },
+    "rate_limit": {
+        "enabled": false,
+        "max_attempts": 100,
+        "decay_seconds": 60
+    },
+    "lists": {
+        "blocklist_path": null,
+        "allowlist_path": null,
+        "role_based_path": null
+    },
+    "role_based": {
+        "prefixes": [
+            "admin", "info", "support", "sales", "contact", "noreply",
+            "no-reply", "help", "webmaster", "postmaster", "hostmaster",
+            "abuse", "billing", "marketing", "hr", "jobs", "careers"
+        ]
+    },
+    "typo": {
+        "common_domains": [
+            "gmail.com", "yahoo.com", "hotmail.com", "outlook.com",
+            "icloud.com", "aol.com", "protonmail.com", "mail.com"
+        ],
+        "mappings": {}
+    },
+    "smtp": {
+        "timeout": 10,
+        "from_email": null,
+        "from_domain": null
+    },
+    "dns": {
+        "timeout": 5
+    }
+}

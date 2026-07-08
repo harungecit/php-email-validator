@@ -14,7 +14,7 @@ use RuntimeException;
  * @author Harun Geçit <info@harungecit.com>
  * @link https://github.com/harungecit
  * @license MIT
- * @version 2.0.0
+ * @version 3.0.0
  */
 class Fetcher
 {
