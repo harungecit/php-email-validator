@@ -57,7 +57,7 @@ class NullCacheAdapterTest extends TestCase
         $this->cache->setMultiple(['key1' => 'value1', 'key2' => 'value2']);
 
         $values = $this->cache->getMultiple(['key1', 'key2'], 'default');
-        $valuesArray = iterator_to_array($values);
+        $valuesArray = is_array($values) ? $values : iterator_to_array($values);
 
         $this->assertEquals('default', $valuesArray['key1']);
         $this->assertEquals('default', $valuesArray['key2']);

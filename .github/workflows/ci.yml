@@ -70,8 +70,12 @@ jobs:
 
       # The dev toolchain (PHPUnit >= 10) requires PHP 8.1, so on 8.0 we only
       # verify that the runtime package installs, lints and autoloads cleanly.
+      # --ignore-platform-reqs lets the resolver see the dev packages without
+      # tripping on their platform constraints; --no-dev means they are never
+      # installed, so only the runtime deps (psr/*) land and the smoke test runs
+      # on real PHP 8.0.
       - name: Install runtime dependencies only
-        run: composer update --no-dev --no-progress --prefer-dist
+        run: composer update --no-dev --ignore-platform-reqs --no-progress --prefer-dist
 
       - name: Check PHP syntax (runtime sources)
         run: find src -name "*.php" -not -path "src/Framework/*" -exec php -l {} \;
