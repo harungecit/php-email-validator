@@ -560,13 +560,16 @@ Licensed under the MIT License. See [LICENSE](LICENSE) for details.
 
 ## Changelog
 
-### v3.0.1
+### v3.1.0
 - Updated the disposable blocklist to 8,100+ domains (244 new domains from the [disposable-email-domains](https://github.com/disposable-email-domains/disposable-email-domains) project).
 - Expanded the allowlist to 190+ domains (added `proton.me`, `pm.me`, `hey.com`, `tuta.com`, `zohomail.com`, `icloud.com`, `duck.com`, `simplelogin.io`, `addy.io`, and more). The upstream allowlist was discontinued; it is now maintained in this package.
 - Added `composer update-lists` (`scripts/update-lists.php`) to refresh the blocklist from upstream with a single command.
 - Expanded the default typo mappings and common-domain list (Proton, Tuta, HEY, Zoho Mail, GMX, Yandex, and regional Yahoo/Hotmail/Outlook domains) and synchronized them across all config templates.
 - Expanded the default role-based prefixes (`administrator`, `donotreply`, `security`, `privacy`, `legal`, `compliance`, `notifications`, and more).
 - `Fetcher::saveList()` now always writes LF line endings regardless of platform.
+
+### v3.0.1
+- Fixed CI failures on PHP 8.0 and 8.1.
 
 ### v3.0.0
 - **Requires PHP 8.0+** (dropped 7.4). Forward-compatible through PHP 8.5.

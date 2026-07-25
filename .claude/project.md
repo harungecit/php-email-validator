@@ -32,7 +32,7 @@ A comprehensive PHP email validation library that provides:
 
 ## Version History
 
-### v3.0.1 (July 2026)
+### v3.1.0 (July 2026)
 - Blocklist updated from upstream (8,166 domains), allowlist expanded (199 domains, now maintained in-package)
 - Added `composer update-lists` (`scripts/update-lists.php`) for one-command blocklist refresh
 - Expanded and synchronized default typo mappings, common domains, and role-based prefixes across all config templates

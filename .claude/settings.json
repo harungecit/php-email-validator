@@ -6,7 +6,7 @@
         "minPhpVersion": "8.0",
         "namespace": "HarunGecit\\EmailValidator",
         "author": "Harun Geçit",
-        "currentVersion": "3.0.1"
+        "currentVersion": "3.1.0"
     },
     "paths": {
         "source": "src/",
