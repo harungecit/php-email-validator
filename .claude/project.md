@@ -32,6 +32,18 @@ A comprehensive PHP email validation library that provides:
 
 ## Version History
 
+### v3.0.1 (July 2026)
+- Blocklist updated from upstream (8,166 domains), allowlist expanded (199 domains, now maintained in-package)
+- Added `composer update-lists` (`scripts/update-lists.php`) for one-command blocklist refresh
+- Expanded and synchronized default typo mappings, common domains, and role-based prefixes across all config templates
+
+### v3.0.0 (July 2026)
+- **Requires PHP 8.0+** (dropped 7.4)
+- Added `validate()` returning `ValidationResult`, `ConfigurationBuilder` with presets, config file loading (PHP/JSON/YAML)
+- Added role-based, subaddress, typo suggestion, SMTP, and catch-all checks
+- Added pluggable cache layer, token-bucket rate limiting, PSR-3 logging
+- Added Laravel and Symfony integrations
+
 ### v2.0.0 (December 2025)
 - **Breaking Change:** Namespace changed from `PHPOrbit\EmailValidator` to `HarunGecit\EmailValidator`
 - **Breaking Change:** Package name changed from `phporbit/php-email-validator` to `harungecit/php-email-validator`
@@ -70,8 +82,8 @@ emailvalidator/
 │   └── workflows/
 │       └── ci.yml             # GitHub Actions CI
 ├── data/
-│   ├── blocklist.conf         # ~4940 disposable domains
-│   └── allowlist.conf         # ~188 legitimate domains
+│   ├── blocklist.conf         # ~8166 disposable domains
+│   └── allowlist.conf         # ~199 legitimate domains
 ├── examples/
 │   └── example.php            # Usage examples
 ├── src/
@@ -125,13 +137,12 @@ Static utility class for loading domain lists.
 
 ## PHP Version Support
 
-- PHP 7.4 (minimum)
-- PHP 8.0
+- PHP 8.0 (minimum)
 - PHP 8.1
 - PHP 8.2
 - PHP 8.3
 - PHP 8.4
-- PHP 8.5 (when available)
+- PHP 8.5
 
 ## Platform Support
 
@@ -142,8 +153,9 @@ Static utility class for loading domain lists.
 ## Dependencies
 
 **Runtime:**
-- PHP >= 7.4
+- PHP >= 8.0
 - ext-filter
+- psr/log, psr/simple-cache
 
 **Development:**
 - PHPUnit ^9.5 || ^10.0 || ^11.0 || ^12.0
@@ -151,7 +163,7 @@ Static utility class for loading domain lists.
 ## Data Files
 
 ### blocklist.conf
-Contains ~4940 disposable email domains. Format: one domain per line, lowercase.
+Contains ~8,166 disposable email domains (synced from the disposable-email-domains project via `composer update-lists`). Format: one domain per line, lowercase.
 
 Common domains included:
 - mailinator.com
@@ -161,7 +173,7 @@ Common domains included:
 - 10minutemail.com
 
 ### allowlist.conf
-Contains ~188 legitimate domains that might be falsely flagged. Format: one domain per line, lowercase.
+Contains ~199 legitimate domains that might be falsely flagged. Format: one domain per line, lowercase.
 
 Includes regional email providers like:
 - 163.com (China)

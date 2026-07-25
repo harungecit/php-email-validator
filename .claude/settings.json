@@ -3,10 +3,10 @@
         "name": "php-email-validator",
         "type": "php-library",
         "language": "php",
-        "minPhpVersion": "7.4",
+        "minPhpVersion": "8.0",
         "namespace": "HarunGecit\\EmailValidator",
         "author": "Harun Geçit",
-        "currentVersion": "2.0.0"
+        "currentVersion": "3.0.1"
     },
     "paths": {
         "source": "src/",
@@ -25,7 +25,7 @@
         "testCoverage": "composer test-coverage"
     },
     "ci": {
-        "phpVersions": ["7.4", "8.0", "8.1", "8.2", "8.3", "8.4", "8.5"],
+        "phpVersions": ["8.0", "8.1", "8.2", "8.3", "8.4", "8.5"],
         "platforms": ["ubuntu-latest", "windows-latest", "macos-latest"]
     }
 }

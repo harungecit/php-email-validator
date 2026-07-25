@@ -236,17 +236,18 @@ class TypoSuggester
     private function getDefaultCommonDomains(): array
     {
         return [
-            'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com',
-            'icloud.com', 'aol.com', 'protonmail.com', 'mail.com',
-            'yandex.com', 'zoho.com', 'gmx.com', 'fastmail.com',
+            'gmail.com', 'googlemail.com', 'yahoo.com', 'hotmail.com', 'outlook.com',
+            'icloud.com', 'aol.com', 'protonmail.com', 'proton.me', 'pm.me',
+            'mail.com', 'yandex.com', 'yandex.ru', 'zoho.com', 'zohomail.com',
+            'gmx.com', 'gmx.de', 'gmx.net', 'fastmail.com',
             'live.com', 'msn.com', 'me.com', 'mac.com',
+            'hey.com', 'tuta.com', 'tutanota.com',
             'yahoo.co.uk', 'hotmail.co.uk', 'btinternet.com',
-            'googlemail.com', 'yahoo.fr', 'orange.fr', 'free.fr',
-            'web.de', 'gmx.de', 't-online.de',
+            'yahoo.fr', 'orange.fr', 'free.fr',
+            'web.de', 't-online.de',
             'yahoo.de', 'yahoo.es', 'yahoo.it',
             'hotmail.fr', 'hotmail.de', 'hotmail.es', 'hotmail.it',
             'outlook.fr', 'outlook.de', 'outlook.es', 'outlook.it',
-            'proton.me', 'pm.me',
         ];
     }
 
@@ -272,7 +273,6 @@ class TypoSuggester
             'gmailc.om' => 'gmail.com',
             'gmaul.com' => 'gmail.com',
             'gmsil.com' => 'gmail.com',
-            'g]mail.com' => 'gmail.com',
             'gemail.com' => 'gmail.com',
             'gimail.com' => 'gmail.com',
 
@@ -310,9 +310,11 @@ class TypoSuggester
             'icoud.com' => 'icloud.com',
             'iclod.com' => 'icloud.com',
             'icloud.co' => 'icloud.com',
+            'icloud.con' => 'icloud.com',
 
             // AOL typos
             'aol.co' => 'aol.com',
+            'aol.con' => 'aol.com',
             'alo.com' => 'aol.com',
             'aoll.com' => 'aol.com',
 
@@ -320,7 +322,14 @@ class TypoSuggester
             'protonmal.com' => 'protonmail.com',
             'protonmai.com' => 'protonmail.com',
             'protonmail.co' => 'protonmail.com',
+            'protonmail.con' => 'protonmail.com',
             'protonmaill.com' => 'protonmail.com',
+            'porton.me' => 'proton.me',
+            'protom.me' => 'proton.me',
+
+            // Live typos
+            'live.co' => 'live.com',
+            'live.con' => 'live.com',
 
             // Common TLD typos
             'gmail.con' => 'gmail.com',

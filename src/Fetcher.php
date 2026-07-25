@@ -226,7 +226,7 @@ class Fetcher
         $domains = array_unique(array_map('strtolower', array_map('trim', $domains)));
         sort($domains, SORT_STRING);
 
-        $content = implode(PHP_EOL, $domains);
+        $content = implode("\n", $domains);
         $result = file_put_contents($filePath, $content);
 
         if ($result === false) {

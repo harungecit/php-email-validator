@@ -25,7 +25,7 @@ class SubaddressDetector
         'icloud.com', 'me.com', 'mac.com',
         'zoho.com', 'zohomail.com',
         'hey.com',
-        'tutanota.com', 'tutanota.de', 'tutamail.com',
+        'tutanota.com', 'tutanota.de', 'tutamail.com', 'tuta.com', 'tuta.io',
     ];
 
     /**

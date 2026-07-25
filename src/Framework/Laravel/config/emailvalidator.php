@@ -90,10 +90,13 @@ return [
     */
     'role_based' => [
         'prefixes' => [
-            'admin', 'info', 'support', 'sales', 'contact', 'noreply',
-            'no-reply', 'help', 'webmaster', 'postmaster', 'hostmaster',
+            'admin', 'administrator', 'info', 'support', 'sales', 'contact',
+            'noreply', 'no-reply', 'donotreply', 'do-not-reply',
+            'help', 'webmaster', 'postmaster', 'hostmaster',
             'abuse', 'billing', 'marketing', 'hr', 'jobs', 'careers',
             'press', 'media', 'office', 'team', 'hello', 'enquiries',
+            'enquiry', 'feedback', 'newsletter', 'subscribe', 'unsubscribe',
+            'security', 'privacy', 'legal', 'compliance', 'notifications',
         ],
     ],
 
@@ -108,8 +111,11 @@ return [
     */
     'typo' => [
         'common_domains' => [
-            'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com',
-            'icloud.com', 'aol.com', 'protonmail.com', 'mail.com',
+            'gmail.com', 'googlemail.com', 'yahoo.com', 'hotmail.com', 'outlook.com',
+            'icloud.com', 'aol.com', 'protonmail.com', 'proton.me', 'pm.me',
+            'mail.com', 'yandex.com', 'zoho.com', 'gmx.com', 'fastmail.com',
+            'live.com', 'msn.com', 'me.com', 'mac.com',
+            'hey.com', 'tuta.com', 'tutanota.com',
         ],
         'mappings' => [
             // Add custom typo => correct mappings here

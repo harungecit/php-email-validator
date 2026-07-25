@@ -61,7 +61,8 @@
     "prefer-stable": true,
     "scripts": {
         "test": "phpunit",
-        "test-coverage": "phpunit --coverage-html coverage"
+        "test-coverage": "phpunit --coverage-html coverage",
+        "update-lists": "php scripts/update-lists.php"
     },
     "config": {
         "sort-packages": true,

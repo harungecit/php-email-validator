@@ -10,8 +10,8 @@
 
 A comprehensive, framework-friendly PHP email validation library: format and RFC checks, disposable-domain detection, MX/DNS verification, role-based detection, plus-addressing (subaddress) handling, typo suggestions, SMTP and catch-all verification, batch validation, pluggable caching and rate limiting — all configurable through a fluent builder.
 
-[![Blocklist Domains](https://img.shields.io/badge/blocklist-7,900%2B%20domains-red?style=flat-square&logo=shield&logoColor=white)]()
-[![Allowlist Domains](https://img.shields.io/badge/allowlist-180%2B%20domains-green?style=flat-square&logo=shield&logoColor=white)]()
+[![Blocklist Domains](https://img.shields.io/badge/blocklist-8,100%2B%20domains-red?style=flat-square&logo=shield&logoColor=white)]()
+[![Allowlist Domains](https://img.shields.io/badge/allowlist-190%2B%20domains-green?style=flat-square&logo=shield&logoColor=white)]()
 [![Platform Support](https://img.shields.io/badge/platform-Linux%20%7C%20Windows%20%7C%20macOS-blue?style=flat-square&logo=windows&logoColor=white)]()
 
 ---
@@ -19,7 +19,7 @@ A comprehensive, framework-friendly PHP email validation library: format and RFC
 ## Features
 
 - **Format Validation** — RFC-compliant format checks via PHP's built-in filters.
-- **Disposable Email Detection** — an extensive bundled blocklist (7,900+ domains, sourced from [disposable-email-domains](https://github.com/disposable-email-domains/disposable-email-domains)) with an allowlist override.
+- **Disposable Email Detection** — an extensive bundled blocklist (8,100+ domains, sourced from [disposable-email-domains](https://github.com/disposable-email-domains/disposable-email-domains)) with an allowlist override.
 - **MX & DNS Verification** — verify that the domain has mail servers (MX) or A/AAAA records.
 - **Role-Based Detection** — flag addresses like `info@`, `admin@`, `support@`.
 - **Subaddress (Plus Addressing)** — detect `user+tag@gmail.com`, extract the base address, compare equivalence.
@@ -421,10 +421,16 @@ The `EmailValidator` service is public and autowirable (service id `email_valida
 
 Bundled data lives in the `data/` directory:
 
-- **Blocklist (`blocklist.conf`)** — 7,900+ disposable/temporary email domains.
-- **Allowlist (`allowlist.conf`)** — 180+ domains that should always be considered valid.
+- **Blocklist (`blocklist.conf`)** — 8,100+ disposable/temporary email domains.
+- **Allowlist (`allowlist.conf`)** — 190+ domains that should always be considered valid. The upstream project no longer ships an allowlist, so this list is maintained as part of this package.
 
-The blocklist is synchronized with the community-maintained [disposable-email-domains](https://github.com/disposable-email-domains/disposable-email-domains) project (plus a few local additions). One lowercase domain per line:
+The blocklist is synchronized with the community-maintained [disposable-email-domains](https://github.com/disposable-email-domains/disposable-email-domains) project (plus a few local additions). To refresh it from upstream, run:
+
+```bash
+composer update-lists
+```
+
+One lowercase domain per line:
 
 ```
 mailinator.com
@@ -553,6 +559,14 @@ Licensed under the MIT License. See [LICENSE](LICENSE) for details.
 ---
 
 ## Changelog
+
+### v3.0.1
+- Updated the disposable blocklist to 8,100+ domains (244 new domains from the [disposable-email-domains](https://github.com/disposable-email-domains/disposable-email-domains) project).
+- Expanded the allowlist to 190+ domains (added `proton.me`, `pm.me`, `hey.com`, `tuta.com`, `zohomail.com`, `icloud.com`, `duck.com`, `simplelogin.io`, `addy.io`, and more). The upstream allowlist was discontinued; it is now maintained in this package.
+- Added `composer update-lists` (`scripts/update-lists.php`) to refresh the blocklist from upstream with a single command.
+- Expanded the default typo mappings and common-domain list (Proton, Tuta, HEY, Zoho Mail, GMX, Yandex, and regional Yahoo/Hotmail/Outlook domains) and synchronized them across all config templates.
+- Expanded the default role-based prefixes (`administrator`, `donotreply`, `security`, `privacy`, `legal`, `compliance`, `notifications`, and more).
+- `Fetcher::saveList()` now always writes LF line endings regardless of platform.
 
 ### v3.0.0
 - **Requires PHP 8.0+** (dropped 7.4). Forward-compatible through PHP 8.5.

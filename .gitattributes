@@ -1,0 +1,6 @@
+# Keep domain list files LF on every platform — Fetcher::saveList() writes LF
+# and the format must stay byte-identical across checkouts.
+*.conf text eol=lf
+*.php text
+*.json text
+*.md text
