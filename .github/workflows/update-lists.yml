@@ -1,0 +1,140 @@
+name: Update Disposable Domain Lists
+
+# Rebuilds data/blocklist.conf from the upstream disposable-email-domains
+# project. When the list changed and the test suite still passes, the change is
+# committed to main and published as a new patch release (tag + GitHub release).
+# Packagist picks the new tag up through its GitHub hook.
+
+on:
+  schedule:
+    # Every Monday at 03:17 UTC
+    - cron: '17 3 * * 1'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Skip the shrink safety check (pass --force to the update script)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-lists
+  cancel-in-progress: false
+
+jobs:
+  update-lists:
+    name: Update lists and release
+    runs-on: ubuntu-latest
+    # Scheduled runs are disabled on forks
+    if: github.event_name == 'workflow_dispatch' || github.repository == 'harungecit/php-email-validator'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, json, intl, filter
+          coverage: none
+          tools: composer:v2
+
+      - name: Install dependencies
+        run: composer update --no-progress --prefer-dist
+
+      - name: Update lists from upstream
+        env:
+          FORCE: ${{ inputs.force }}
+        run: |
+          if [ "$FORCE" = "true" ]; then
+            php scripts/update-lists.php --force | tee update-summary.txt
+          else
+            php scripts/update-lists.php | tee update-summary.txt
+          fi
+
+      - name: Detect changes
+        id: changes
+        run: |
+          if git diff --quiet -- data/; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Lists are already up to date."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "added=$(git diff --numstat -- data/blocklist.conf | cut -f1)" >> "$GITHUB_OUTPUT"
+            echo "removed=$(git diff --numstat -- data/blocklist.conf | cut -f2)" >> "$GITHUB_OUTPUT"
+            echo "total=$(grep -c . data/blocklist.conf)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Refresh domain counts in README
+        if: steps.changes.outputs.changed == 'true'
+        env:
+          TOTAL: ${{ steps.changes.outputs.total }}
+        run: |
+          rounded=$(( TOTAL / 100 * 100 ))
+          formatted=$(echo "$rounded" | sed -E ':a;s/^([0-9]+)([0-9]{3})/\1,\2/;ta')
+          sed -i -E "s#badge/blocklist-[0-9,]+%2B#badge/blocklist-${formatted}%2B#" README.md
+          sed -i -E "s#— [0-9,]+\+ disposable/temporary email domains#— ${formatted}+ disposable/temporary email domains#" README.md
+
+      - name: Run tests
+        if: steps.changes.outputs.changed == 'true'
+        run: composer test
+
+      - name: Determine next version
+        if: steps.changes.outputs.changed == 'true'
+        id: version
+        run: |
+          latest=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n 1)
+          if [ -z "$latest" ]; then
+            echo "No existing version tag found." >&2
+            exit 1
+          fi
+          IFS='.' read -r major minor patch <<< "${latest#v}"
+          echo "tag=v${major}.${minor}.$((patch + 1))" >> "$GITHUB_OUTPUT"
+          echo "previous=${latest}" >> "$GITHUB_OUTPUT"
+
+      - name: Commit, tag and push
+        if: steps.changes.outputs.changed == 'true'
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+          ADDED: ${{ steps.changes.outputs.added }}
+          REMOVED: ${{ steps.changes.outputs.removed }}
+          TOTAL: ${{ steps.changes.outputs.total }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/ README.md
+          git commit -m "Update disposable blocklist (+${ADDED} / -${REMOVED}, ${TOTAL} domains)"
+          git tag -a "$TAG" -m "$TAG: disposable blocklist update"
+          git push origin main "$TAG"
+
+      - name: Create GitHub release
+        if: steps.changes.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          PREVIOUS: ${{ steps.version.outputs.previous }}
+          ADDED: ${{ steps.changes.outputs.added }}
+          REMOVED: ${{ steps.changes.outputs.removed }}
+          TOTAL: ${{ steps.changes.outputs.total }}
+        run: |
+          {
+            echo "Automated data release: the disposable domain blocklist was synchronized with the"
+            echo "[disposable-email-domains](https://github.com/disposable-email-domains/disposable-email-domains) project."
+            echo
+            echo "- Domains added: **${ADDED}**"
+            echo "- Domains removed: **${REMOVED}**"
+            echo "- Blocklist size: **${TOTAL}** domains"
+            echo
+            echo "No code changes. Full diff: https://github.com/${GITHUB_REPOSITORY}/compare/${PREVIOUS}...${TAG}"
+            echo
+            echo '```'
+            cat update-summary.txt
+            echo '```'
+          } > release-notes.md
+          gh release create "$TAG" --title "$TAG" --notes-file release-notes.md --verify-tag

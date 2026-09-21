@@ -71,6 +71,16 @@ class EmailValidator implements ValidatorInterface, ConfigurableInterface
     private array $allowlist = [];
 
     /**
+     * @var array<string, int>|null Lazily built lookup index of the blocklist (reset whenever the list changes).
+     */
+    private ?array $blocklistIndex = null;
+
+    /**
+     * @var array<string, int>|null Lazily built lookup index of the allowlist (reset whenever the list changes).
+     */
+    private ?array $allowlistIndex = null;
+
+    /**
      * @var RoleBasedValidator|null Role-based validator instance.
      */
     private ?RoleBasedValidator $roleBasedValidator = null;
@@ -153,6 +163,9 @@ class EmailValidator implements ValidatorInterface, ConfigurableInterface
         } else {
             $this->allowlist = Fetcher::loadAllowlist();
         }
+
+        $this->blocklistIndex = null;
+        $this->allowlistIndex = null;
     }
 
     // ==================== Factory Methods ====================
@@ -338,6 +351,12 @@ class EmailValidator implements ValidatorInterface, ConfigurableInterface
     /**
      * Checks if the given email address is from a disposable email provider.
      *
+     * The domain and each of its parent domains are checked, from most to
+     * least specific (e.g. "a.b.mailinator.com", "b.mailinator.com",
+     * "mailinator.com"), so subdomains of a disposable provider are detected
+     * too. The most specific match wins; on the same level the allowlist
+     * takes priority over the blocklist.
+     *
      * @param string $email The email address to check.
      * @return bool Returns true if the email is disposable, false otherwise.
      */
@@ -349,11 +368,25 @@ class EmailValidator implements ValidatorInterface, ConfigurableInterface
             return false;
         }
 
-        if (in_array($domain, $this->allowlist, true)) {
-            return false;
+        $this->allowlistIndex ??= array_flip($this->allowlist);
+        $this->blocklistIndex ??= array_flip($this->blocklist);
+
+        $candidate = rtrim($domain, '.');
+
+        // Stop before the bare TLD: a candidate must contain at least one dot.
+        while (strpos($candidate, '.') !== false) {
+            if (isset($this->allowlistIndex[$candidate])) {
+                return false;
+            }
+
+            if (isset($this->blocklistIndex[$candidate])) {
+                return true;
+            }
+
+            $candidate = substr($candidate, strpos($candidate, '.') + 1);
         }
 
-        return in_array($domain, $this->blocklist, true);
+        return false;
     }
 
     /**
@@ -698,6 +731,7 @@ class EmailValidator implements ValidatorInterface, ConfigurableInterface
         $domain = strtolower(trim($domain));
         if (!in_array($domain, $this->blocklist, true)) {
             $this->blocklist[] = $domain;
+            $this->blocklistIndex = null;
         }
         return $this;
     }
@@ -727,6 +761,7 @@ class EmailValidator implements ValidatorInterface, ConfigurableInterface
         $domain = strtolower(trim($domain));
         if (!in_array($domain, $this->allowlist, true)) {
             $this->allowlist[] = $domain;
+            $this->allowlistIndex = null;
         }
         return $this;
     }
@@ -758,6 +793,7 @@ class EmailValidator implements ValidatorInterface, ConfigurableInterface
         if ($key !== false) {
             unset($this->blocklist[$key]);
             $this->blocklist = array_values($this->blocklist);
+            $this->blocklistIndex = null;
         }
         return $this;
     }
@@ -775,6 +811,7 @@ class EmailValidator implements ValidatorInterface, ConfigurableInterface
         if ($key !== false) {
             unset($this->allowlist[$key]);
             $this->allowlist = array_values($this->allowlist);
+            $this->allowlistIndex = null;
         }
         return $this;
     }

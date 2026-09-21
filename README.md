@@ -10,7 +10,7 @@
 
 A comprehensive, framework-friendly PHP email validation library: format and RFC checks, disposable-domain detection, MX/DNS verification, role-based detection, plus-addressing (subaddress) handling, typo suggestions, SMTP and catch-all verification, batch validation, pluggable caching and rate limiting — all configurable through a fluent builder.
 
-[![Blocklist Domains](https://img.shields.io/badge/blocklist-8,100%2B%20domains-red?style=flat-square&logo=shield&logoColor=white)]()
+[![Blocklist Domains](https://img.shields.io/badge/blocklist-8,900%2B%20domains-red?style=flat-square&logo=shield&logoColor=white)]()
 [![Allowlist Domains](https://img.shields.io/badge/allowlist-190%2B%20domains-green?style=flat-square&logo=shield&logoColor=white)]()
 [![Platform Support](https://img.shields.io/badge/platform-Linux%20%7C%20Windows%20%7C%20macOS-blue?style=flat-square&logo=windows&logoColor=white)]()
 
@@ -421,14 +421,20 @@ The `EmailValidator` service is public and autowirable (service id `email_valida
 
 Bundled data lives in the `data/` directory:
 
-- **Blocklist (`blocklist.conf`)** — 8,100+ disposable/temporary email domains.
+- **Blocklist (`blocklist.conf`)** — 8,900+ disposable/temporary email domains.
 - **Allowlist (`allowlist.conf`)** — 190+ domains that should always be considered valid. The upstream project no longer ships an allowlist, so this list is maintained as part of this package.
 
-The blocklist is synchronized with the community-maintained [disposable-email-domains](https://github.com/disposable-email-domains/disposable-email-domains) project (plus a few local additions). To refresh it from upstream, run:
+- **Local additions (`blocklist.local.conf`)** — domains that stay blocked even if upstream does not list them.
+
+The blocklist is rebuilt from the community-maintained [disposable-email-domains](https://github.com/disposable-email-domains/disposable-email-domains) project as `upstream + blocklist.local.conf − allowlist.conf`, so upstream false-positive removals are picked up as well. Do not edit `blocklist.conf` by hand — put extra domains in `blocklist.local.conf`. To refresh it from upstream, run:
 
 ```bash
 composer update-lists
 ```
+
+**Automatic updates:** a scheduled GitHub Actions workflow (`.github/workflows/update-lists.yml`) runs this every Monday. When the list changed and the test suite passes, it commits the new list and publishes a patch release (e.g. `v3.1.1` → `v3.1.2`), so a regular `composer update` keeps your disposable domain list current. These data-only releases are documented on the [Releases](https://github.com/harungecit/php-email-validator/releases) page rather than in the changelog below.
+
+**Subdomains:** `isDisposable()` also checks parent domains, so `user@anything.mailinator.com` is detected through the `mailinator.com` entry. The most specific entry wins, and on the same level the allowlist takes priority.
 
 One lowercase domain per line:
 
@@ -559,6 +565,12 @@ Licensed under the MIT License. See [LICENSE](LICENSE) for details.
 ---
 
 ## Changelog
+
+### v3.1.1
+- Updated the disposable blocklist to 8,900+ domains (785 new domains from upstream).
+- `isDisposable()` now detects subdomains of disposable providers (`user@sub.mailinator.com`) by also checking parent domains; the most specific list entry wins. Lookups use a hash index instead of a linear scan.
+- Added a scheduled GitHub Actions workflow that refreshes the blocklist weekly and publishes a patch release automatically.
+- `composer update-lists` now rebuilds the blocklist as `upstream + data/blocklist.local.conf − allowlist` instead of a keep-everything union, so upstream false-positive removals are applied (removed `gmal.com`, `iwi.net`, `mailhub.pro`). Added safety checks for unattended runs (malformed lines skipped, abort on a suspiciously small upstream or a >5% shrink; `--force` overrides).
 
 ### v3.1.0
 - Updated the disposable blocklist to 8,100+ domains (244 new domains from the [disposable-email-domains](https://github.com/disposable-email-domains/disposable-email-domains) project).

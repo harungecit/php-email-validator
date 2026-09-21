@@ -133,6 +133,36 @@ class EmailValidatorTest extends TestCase
         $this->assertTrue($this->validator->isDisposable('test@Mailinator.Com'));
     }
 
+    public function testDisposableSubdomainIsDetected(): void
+    {
+        $validator = new EmailValidator(['mailinator.com'], []);
+
+        $this->assertTrue($validator->isDisposable('user@sub.mailinator.com'));
+        $this->assertTrue($validator->isDisposable('user@a.b.mailinator.com'));
+        $this->assertFalse($validator->isDisposable('user@notmailinator.com'));
+        $this->assertFalse($validator->isDisposable('user@mailinator.com.example.org'));
+    }
+
+    public function testDisposableMostSpecificMatchWins(): void
+    {
+        $allowedSubdomain = new EmailValidator(['example.com'], ['corp.example.com']);
+        $this->assertTrue($allowedSubdomain->isDisposable('user@example.com'));
+        $this->assertTrue($allowedSubdomain->isDisposable('user@temp.example.com'));
+        $this->assertFalse($allowedSubdomain->isDisposable('user@corp.example.com'));
+        $this->assertFalse($allowedSubdomain->isDisposable('user@eu.corp.example.com'));
+
+        $blockedSubdomain = new EmailValidator(['temp.example.com'], ['example.com']);
+        $this->assertFalse($blockedSubdomain->isDisposable('user@example.com'));
+        $this->assertTrue($blockedSubdomain->isDisposable('user@temp.example.com'));
+    }
+
+    public function testDisposableNeverMatchesBareTld(): void
+    {
+        $validator = new EmailValidator(['com'], []);
+
+        $this->assertFalse($validator->isDisposable('user@example.com'));
+    }
+
     // ========================================
     // MX Record Validation Tests
     // ========================================
