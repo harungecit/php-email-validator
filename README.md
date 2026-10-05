@@ -10,7 +10,7 @@
 
 A comprehensive, framework-friendly PHP email validation library: format and RFC checks, disposable-domain detection, MX/DNS verification, role-based detection, plus-addressing (subaddress) handling, typo suggestions, SMTP and catch-all verification, batch validation, pluggable caching and rate limiting — all configurable through a fluent builder.
 
-[![Blocklist Domains](https://img.shields.io/badge/blocklist-9,100%2B%20domains-red?style=flat-square&logo=shield&logoColor=white)]()
+[![Blocklist Domains](https://img.shields.io/badge/blocklist-9,200%2B%20domains-red?style=flat-square&logo=shield&logoColor=white)]()
 [![Allowlist Domains](https://img.shields.io/badge/allowlist-190%2B%20domains-green?style=flat-square&logo=shield&logoColor=white)]()
 [![Platform Support](https://img.shields.io/badge/platform-Linux%20%7C%20Windows%20%7C%20macOS-blue?style=flat-square&logo=windows&logoColor=white)]()
 
@@ -421,7 +421,7 @@ The `EmailValidator` service is public and autowirable (service id `email_valida
 
 Bundled data lives in the `data/` directory:
 
-- **Blocklist (`blocklist.conf`)** — 9,100+ disposable/temporary email domains.
+- **Blocklist (`blocklist.conf`)** — 9,200+ disposable/temporary email domains.
 - **Allowlist (`allowlist.conf`)** — 190+ domains that should always be considered valid. The upstream project no longer ships an allowlist, so this list is maintained as part of this package.
 
 - **Local additions (`blocklist.local.conf`)** — domains that stay blocked even if upstream does not list them.
