@@ -401,6 +401,113 @@ class ConfigurationBuilder
         return $this;
     }
 
+    /**
+     * Blocks additional domains on top of the bundled blocklist.
+     *
+     * @param array<string> $domains Domains to block.
+     * @return self
+     */
+    public function withCustomBlocklist(array $domains): self
+    {
+        $this->config->setCustomBlocklist(array_merge($this->config->getCustomBlocklist(), $domains));
+        return $this;
+    }
+
+    /**
+     * Always allows these domains, even if a blocklist contains them.
+     *
+     * @param array<string> $domains Domains to allow.
+     * @return self
+     */
+    public function withCustomAllowlist(array $domains): self
+    {
+        $this->config->setCustomAllowlist(array_merge($this->config->getCustomAllowlist(), $domains));
+        return $this;
+    }
+
+    /**
+     * Merges extra blocklist files or directories with the bundled blocklist.
+     *
+     * @param array<string>|string $paths Files or directories (*.conf, *.txt, *.list, *.json).
+     * @return self
+     */
+    public function withCustomBlocklistFiles(array|string $paths): self
+    {
+        $this->config->setCustomBlocklistPaths(array_merge($this->config->getCustomBlocklistPaths(), (array) $paths));
+        return $this;
+    }
+
+    /**
+     * Merges extra allowlist files or directories with the bundled allowlist.
+     *
+     * @param array<string>|string $paths Files or directories.
+     * @return self
+     */
+    public function withCustomAllowlistFiles(array|string $paths): self
+    {
+        $this->config->setCustomAllowlistPaths(array_merge($this->config->getCustomAllowlistPaths(), (array) $paths));
+        return $this;
+    }
+
+    /**
+     * Enables remote list synchronization: domains downloaded by
+     * `email-validator sync` (or ListSynchronizer) are stored in $path and
+     * blocked in addition to the bundled list.
+     *
+     * @param string $path File that stores the synchronized domains.
+     * @param array<string>|null $urls Remote lists to download (null keeps the default source).
+     * @param int|null $timeout HTTP timeout in seconds.
+     * @return self
+     */
+    public function withSyncedBlocklist(string $path, ?array $urls = null, ?int $timeout = null): self
+    {
+        $this->config->setSyncedBlocklistPath($path);
+        if ($urls !== null) {
+            $this->config->setSyncUrls($urls);
+        }
+        if ($timeout !== null) {
+            $this->config->setSyncTimeout($timeout);
+        }
+        return $this;
+    }
+
+    /**
+     * Matches list entries exactly instead of also matching their subdomains.
+     *
+     * @return self
+     */
+    public function withoutSubdomainBlocking(): self
+    {
+        $this->config->enableSubdomainBlocking(false);
+        return $this;
+    }
+
+    // ==================== Format Configuration ====================
+
+    /**
+     * Sets the format validation mode: "filter" (default), "filter_unicode",
+     * "rfc" or "strict" (the last two require egulias/email-validator).
+     *
+     * @param string $mode One of Configuration::FORMAT_MODES.
+     * @return self
+     */
+    public function withFormatMode(string $mode): self
+    {
+        $this->config->setFormatMode($mode);
+        return $this;
+    }
+
+    /**
+     * Enables homograph / mixed-script spoofing detection (requires ext-intl).
+     *
+     * @return self
+     */
+    public function withSpoofCheck(): self
+    {
+        $this->config->enableSpoofCheck(true);
+        return $this;
+    }
+
     // ==================== Direct Access ====================
 
     /**

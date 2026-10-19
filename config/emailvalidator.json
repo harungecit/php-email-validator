@@ -7,7 +7,11 @@
         "smtp": false,
         "typo_suggestion": true,
         "subaddress": false,
-        "catch_all": false
+        "catch_all": false,
+        "spoof": false
+    },
+    "format": {
+        "mode": "filter"
     },
     "cache": {
         "driver": "memory",
@@ -23,7 +27,17 @@
     "lists": {
         "blocklist_path": null,
         "allowlist_path": null,
-        "role_based_path": null
+        "role_based_path": null,
+        "custom_blocklist": [],
+        "custom_allowlist": [],
+        "custom_blocklist_paths": [],
+        "custom_allowlist_paths": [],
+        "synced_blocklist_path": null,
+        "block_subdomains": true
+    },
+    "sync": {
+        "urls": ["https://raw.githubusercontent.com/harungecit/php-email-validator/main/data/blocklist.conf"],
+        "timeout": 30
     },
     "role_based": {
         "prefixes": [

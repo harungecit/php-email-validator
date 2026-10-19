@@ -1,0 +1,33 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+/*
+ * php-email-validator command line interface.
+ *
+ *   vendor/bin/email-validator check user@mailinator.com
+ *   vendor/bin/email-validator sync --path=storage/email-validator/synced.txt
+ *   vendor/bin/email-validator help
+ */
+
+if (PHP_SAPI !== 'cli' && PHP_SAPI !== 'phpdbg') {
+    fwrite(STDERR, 'This script must be run from the command line.' . PHP_EOL);
+    exit(2);
+}
+
+$autoloaders = [
+    $GLOBALS['_composer_autoload_path'] ?? null, // Composer >= 2.2 bin proxy
+    __DIR__ . '/../vendor/autoload.php',         // package checkout
+    __DIR__ . '/../../../autoload.php',          // installed as a dependency
+];
+
+foreach ($autoloaders as $autoloader) {
+    if (is_string($autoloader) && is_file($autoloader)) {
+        require $autoloader;
+        exit((new HarunGecit\EmailValidator\Console\Cli())->run($argv));
+    }
+}
+
+fwrite(STDERR, 'Unable to find the Composer autoloader. Run "composer install" first.' . PHP_EOL);
+exit(2);

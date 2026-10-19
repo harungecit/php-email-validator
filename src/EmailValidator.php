@@ -21,6 +21,9 @@ use HarunGecit\EmailValidator\Validators\SmtpValidator;
 use HarunGecit\EmailValidator\Validators\CatchAllDetector;
 use HarunGecit\EmailValidator\Result\ValidationResult;
 use HarunGecit\EmailValidator\Result\SuggestionResult;
+use HarunGecit\EmailValidator\Result\DisposableCheckResult;
+use HarunGecit\EmailValidator\Support\Domain;
+use HarunGecit\EmailValidator\Exceptions\ConfigurationException;
 use HarunGecit\EmailValidator\Exceptions\RateLimitExceededException;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -36,7 +39,7 @@ use Psr\Log\NullLogger;
  * @author Harun Geçit <info@harungecit.com>
  * @link https://github.com/harungecit
  * @license MIT
- * @version 3.0.0
+ * @version 3.2.0
  */
 class EmailValidator implements ValidatorInterface, ConfigurableInterface
 {
@@ -61,24 +64,35 @@ class EmailValidator implements ValidatorInterface, ConfigurableInterface
     private LoggerInterface $logger;
 
     /**
-     * @var array<string> List of disposable email domains to block.
+     * Lookup index of the base blocklist (bundled or `lists.blocklist_path`).
+     *
+     * The bundled index can hold 100k+ entries and may be an immutable
+     * OPcache array, so it is never modified: runtime additions go to
+     * $extraBlocklist and runtime removals to $removedBlocklist.
+     *
+     * @var array<string, int|bool>
      */
-    private array $blocklist = [];
+    private array $blocklistIndex = [];
 
     /**
-     * @var array<string> List of email domains to always allow.
+     * @var array<string, string> Blocked domains on top of the base list => source (custom|synced).
      */
-    private array $allowlist = [];
+    private array $extraBlocklist = [];
 
     /**
-     * @var array<string, int>|null Lazily built lookup index of the blocklist (reset whenever the list changes).
+     * @var array<string, bool> Base blocklist entries removed at runtime.
      */
-    private ?array $blocklistIndex = null;
+    private array $removedBlocklist = [];
 
     /**
-     * @var array<string, int>|null Lazily built lookup index of the allowlist (reset whenever the list changes).
+     * @var array<string, int|bool> Lookup index of the base allowlist (bundled or `lists.allowlist_path`).
      */
-    private ?array $allowlistIndex = null;
+    private array $allowlistIndex = [];
+
+    /**
+     * @var array<string, bool> Domains allowed by the application (`lists.custom_allowlist*`, addToAllowlist()).
+     */
+    private array $customAllowlistIndex = [];
 
     /**
      * @var RoleBasedValidator|null Role-based validator instance.
@@ -116,8 +130,8 @@ class EmailValidator implements ValidatorInterface, ConfigurableInterface
         // Backward compatibility: if array is passed, treat as blocklist
         if (is_array($configOrBlocklist)) {
             $this->config = new Configuration();
-            $this->blocklist = array_map('strtolower', $configOrBlocklist);
-            $this->allowlist = array_map('strtolower', $allowlist);
+            $this->blocklistIndex = self::toIndex($configOrBlocklist);
+            $this->allowlistIndex = self::toIndex($allowlist);
         } elseif ($configOrBlocklist instanceof Configuration) {
             $this->config = $configOrBlocklist;
             $this->loadLists();
@@ -145,27 +159,71 @@ class EmailValidator implements ValidatorInterface, ConfigurableInterface
     }
 
     /**
-     * Load blocklist and allowlist from files.
+     * Load blocklist and allowlist from files and configuration.
+     *
+     * Missing custom or synced list files are skipped (a synced list does not
+     * exist until the first sync); a missing base list path throws.
      */
     private function loadLists(): void
     {
         $blocklistPath = $this->config->getBlocklistPath();
         $allowlistPath = $this->config->getAllowlistPath();
 
-        if ($blocklistPath !== null) {
-            $this->blocklist = Fetcher::loadCustomBlocklist($blocklistPath);
-        } else {
-            $this->blocklist = Fetcher::loadBlocklist();
+        $this->blocklistIndex = $blocklistPath !== null
+            ? self::toIndex(Fetcher::loadCustomBlocklist($blocklistPath))
+            : Fetcher::loadBlocklistIndex();
+
+        $this->allowlistIndex = $allowlistPath !== null
+            ? self::toIndex(Fetcher::loadCustomAllowlist($allowlistPath))
+            : Fetcher::loadAllowlistIndex();
+
+        $this->customAllowlistIndex = self::toIndex(array_merge(
+            $this->config->getCustomAllowlist(),
+            Fetcher::loadPaths($this->config->getCustomAllowlistPaths(), true)
+        ));
+
+        $this->extraBlocklist = [];
+        $this->removedBlocklist = [];
+
+        $syncedPath = $this->config->getSyncedBlocklistPath();
+        if ($syncedPath !== null) {
+            foreach (Fetcher::loadPaths([$syncedPath], true) as $domain) {
+                $this->addExtraBlocked($domain, DisposableCheckResult::SOURCE_SYNCED);
+            }
         }
 
-        if ($allowlistPath !== null) {
-            $this->allowlist = Fetcher::loadCustomAllowlist($allowlistPath);
-        } else {
-            $this->allowlist = Fetcher::loadAllowlist();
+        $custom = array_merge(
+            Fetcher::loadPaths($this->config->getCustomBlocklistPaths(), true),
+            $this->config->getCustomBlocklist()
+        );
+        foreach ($custom as $domain) {
+            $this->addExtraBlocked($domain, DisposableCheckResult::SOURCE_CUSTOM);
         }
+    }
 
-        $this->blocklistIndex = null;
-        $this->allowlistIndex = null;
+    /**
+     * Records a blocked domain that is not part of the base blocklist.
+     */
+    private function addExtraBlocked(string $domain, string $source): void
+    {
+        if (!isset($this->blocklistIndex[$domain])) {
+            $this->extraBlocklist[$domain] = $source;
+        }
+    }
+
+    /**
+     * Builds a lookup index from a list of domains.
+     *
+     * @param array<string> $domains
+     * @return array<string, bool>
+     */
+    private static function toIndex(array $domains): array
+    {
+        $index = [];
+        foreach ($domains as $domain) {
+            $index[strtolower(trim((string) $domain))] = true;
+        }
+        return $index;
     }
 
     // ==================== Factory Methods ====================
@@ -177,10 +235,7 @@ class EmailValidator implements ValidatorInterface, ConfigurableInterface
      */
     public static function create(): self
     {
-        return new self(
-            Fetcher::loadBlocklist(),
-            Fetcher::loadAllowlist()
-        );
+        return new self();
     }
 
     /**
@@ -249,10 +304,26 @@ class EmailValidator implements ValidatorInterface, ConfigurableInterface
             }
         }
 
+        // Spoof (homograph / mixed-script) check
+        if ($this->config->isSpoofCheckEnabled()) {
+            $isSpoofed = $this->isSpoofed($email);
+            if ($isSpoofed === null) {
+                $result->addWarning('Spoof check skipped: ext-intl is not available');
+            } else {
+                $result->addCheck('spoof', !$isSpoofed, $isSpoofed ? 'Email contains mixed-script or invisible characters' : null);
+            }
+        }
+
         // Disposable check
         if ($this->config->isDisposableCheckEnabled()) {
-            $isDisposable = $this->isDisposable($email);
+            $disposable = strpos($email, '@') !== false ? $this->checkDisposable($email) : null;
+            $isDisposable = $disposable !== null && $disposable->isDisposable();
             $result->addCheck('disposable', !$isDisposable, $isDisposable ? 'Disposable email address' : null);
+
+            if ($disposable !== null && $disposable->getMatchedDomain() !== null) {
+                $result->addMetadata('disposable_match', $disposable->getMatchedDomain());
+                $result->addMetadata('disposable_source', $disposable->getSource());
+            }
         }
 
         // MX check
@@ -341,11 +412,19 @@ class EmailValidator implements ValidatorInterface, ConfigurableInterface
      */
     public function isValidFormat(string $email): bool
     {
-        if (empty($email)) {
+        if ($email === '') {
             return false;
         }
 
-        return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
+        switch ($this->config->getFormatMode()) {
+            case 'filter_unicode':
+                return filter_var($email, FILTER_VALIDATE_EMAIL, FILTER_FLAG_EMAIL_UNICODE) !== false;
+            case 'rfc':
+            case 'strict':
+                return $this->isValidRfcFormat($email, $this->config->getFormatMode() === 'strict');
+            default:
+                return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
+        }
     }
 
     /**
@@ -354,36 +433,120 @@ class EmailValidator implements ValidatorInterface, ConfigurableInterface
      * The domain and each of its parent domains are checked, from most to
      * least specific (e.g. "a.b.mailinator.com", "b.mailinator.com",
      * "mailinator.com"), so subdomains of a disposable provider are detected
-     * too. The most specific match wins; on the same level the allowlist
-     * takes priority over the blocklist.
+     * too (disable with `lists.block_subdomains = false`). The most specific
+     * match wins; on the same level the allowlist takes priority.
      *
      * @param string $email The email address to check.
      * @return bool Returns true if the email is disposable, false otherwise.
      */
     public function isDisposable(string $email): bool
     {
-        $domain = $this->extractDomain($email);
-
-        if ($domain === null) {
+        if (strpos($email, '@') === false) {
             return false;
         }
 
-        $this->allowlistIndex ??= array_flip($this->allowlist);
-        $this->blocklistIndex ??= array_flip($this->blocklist);
+        return $this->checkDisposable($email)->isDisposable();
+    }
 
-        $candidate = rtrim($domain, '.');
+    /**
+     * Checks if a bare domain (e.g. "mailinator.com") is disposable.
+     *
+     * @param string $domain The domain to check.
+     * @return bool
+     */
+    public function isDisposableDomain(string $domain): bool
+    {
+        return $this->checkDisposable($domain)->isDisposable();
+    }
 
-        // Stop before the bare TLD: a candidate must contain at least one dot.
-        while (strpos($candidate, '.') !== false) {
-            if (isset($this->allowlistIndex[$candidate])) {
-                return false;
+    /**
+     * Explains a disposable-domain lookup for an email address or bare domain:
+     * whether it is disposable, which list entry matched (the domain or one of
+     * its parents) and which list that entry came from.
+     *
+     * ```php
+     * $check = $validator->checkDisposable('user@eu.mailinator.com');
+     * $check->isDisposable();      // true
+     * $check->getMatchedDomain();  // 'mailinator.com'
+     * $check->getSource();         // 'blocklist'
+     * ```
+     *
+     * @param string $emailOrDomain An email address or a bare domain.
+     * @return DisposableCheckResult
+     */
+    public function checkDisposable(string $emailOrDomain): DisposableCheckResult
+    {
+        $domain = Domain::normalize($emailOrDomain);
+
+        if ($domain === null) {
+            return new DisposableCheckResult($emailOrDomain, null, false);
+        }
+
+        $candidates = $this->config->isSubdomainBlockingEnabled() ? Domain::withParents($domain) : [$domain];
+
+        // Precedence on each level: the application's own lists first (allow, then block),
+        // then the bundled allowlist, then the bundled and synced blocklists.
+        foreach ($candidates as $candidate) {
+            if (isset($this->customAllowlistIndex[$candidate])) {
+                return new DisposableCheckResult($emailOrDomain, $domain, false, $candidate, DisposableCheckResult::SOURCE_ALLOWLIST);
             }
 
-            if (isset($this->blocklistIndex[$candidate])) {
+            $extraSource = $this->extraBlocklist[$candidate] ?? null;
+
+            if ($extraSource === DisposableCheckResult::SOURCE_CUSTOM) {
+                return new DisposableCheckResult($emailOrDomain, $domain, true, $candidate, $extraSource);
+            }
+
+            if (isset($this->allowlistIndex[$candidate])) {
+                return new DisposableCheckResult($emailOrDomain, $domain, false, $candidate, DisposableCheckResult::SOURCE_ALLOWLIST);
+            }
+
+            if ($extraSource !== null) {
+                return new DisposableCheckResult($emailOrDomain, $domain, true, $candidate, $extraSource);
+            }
+
+            if (isset($this->blocklistIndex[$candidate]) && !isset($this->removedBlocklist[$candidate])) {
+                return new DisposableCheckResult($emailOrDomain, $domain, true, $candidate, DisposableCheckResult::SOURCE_BLOCKLIST);
+            }
+        }
+
+        return new DisposableCheckResult($emailOrDomain, $domain, false);
+    }
+
+    /**
+     * Detects visually deceptive addresses: a local part or domain label that
+     * mixes scripts (e.g. a Cyrillic "а" inside "gmаil") or contains invisible
+     * characters. Each part is checked separately, so legitimate addresses in
+     * a single non-Latin script (e.g. "иван@почта.рф") are not flagged.
+     *
+     * @param string $email The email address to check.
+     * @return bool|null True if suspicious, false if not, null if ext-intl is unavailable.
+     */
+    public function isSpoofed(string $email): ?bool
+    {
+        if (!class_exists(\Spoofchecker::class)) {
+            return null;
+        }
+
+        $checker = new \Spoofchecker();
+        $checker->setChecks(\Spoofchecker::SINGLE_SCRIPT | \Spoofchecker::INVISIBLE);
+
+        $atPos = strrpos($email, '@');
+        $parts = $atPos === false ? [$email] : [substr($email, 0, $atPos)];
+
+        if ($atPos !== false) {
+            foreach (explode('.', substr($email, $atPos + 1)) as $label) {
+                if (strncasecmp($label, 'xn--', 4) === 0 && function_exists('idn_to_utf8')) {
+                    $label = idn_to_utf8($label, IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46) ?: $label;
+                }
+                $parts[] = $label;
+            }
+        }
+
+        foreach ($parts as $part) {
+            if ($part !== '' && $checker->isSuspicious($part)) {
                 return true;
             }
-
-            $candidate = substr($candidate, strpos($candidate, '.') + 1);
         }
 
         return false;
@@ -705,11 +868,12 @@ class EmailValidator implements ValidatorInterface, ConfigurableInterface
     public function isAllowlisted(string $email): bool
     {
         $domain = $this->extractDomain($email);
-        return $domain !== null && in_array($domain, $this->allowlist, true);
+        return $domain !== null && (isset($this->customAllowlistIndex[$domain]) || isset($this->allowlistIndex[$domain]));
     }
 
     /**
-     * Checks if the email domain is in the blocklist.
+     * Checks if the email domain is in the blocklist (exact match, parent
+     * domains are not considered — use isDisposable() for that).
      *
      * @param string $email The email address to check.
      * @return bool Returns true if domain is in blocklist.
@@ -717,7 +881,13 @@ class EmailValidator implements ValidatorInterface, ConfigurableInterface
     public function isBlocklisted(string $email): bool
     {
         $domain = $this->extractDomain($email);
-        return $domain !== null && in_array($domain, $this->blocklist, true);
+
+        if ($domain === null) {
+            return false;
+        }
+
+        return isset($this->extraBlocklist[$domain])
+            || (isset($this->blocklistIndex[$domain]) && !isset($this->removedBlocklist[$domain]));
     }
 
     /**
@@ -729,10 +899,13 @@ class EmailValidator implements ValidatorInterface, ConfigurableInterface
     public function addToBlocklist(string $domain): self
     {
         $domain = strtolower(trim($domain));
-        if (!in_array($domain, $this->blocklist, true)) {
-            $this->blocklist[] = $domain;
-            $this->blocklistIndex = null;
+
+        if (isset($this->removedBlocklist[$domain])) {
+            unset($this->removedBlocklist[$domain]);
+        } elseif (!isset($this->blocklistIndex[$domain]) && !isset($this->extraBlocklist[$domain])) {
+            $this->extraBlocklist[$domain] = DisposableCheckResult::SOURCE_CUSTOM;
         }
+
         return $this;
     }
 
@@ -758,11 +931,7 @@ class EmailValidator implements ValidatorInterface, ConfigurableInterface
      */
     public function addToAllowlist(string $domain): self
     {
-        $domain = strtolower(trim($domain));
-        if (!in_array($domain, $this->allowlist, true)) {
-            $this->allowlist[] = $domain;
-            $this->allowlistIndex = null;
-        }
+        $this->customAllowlistIndex[strtolower(trim($domain))] = true;
         return $this;
     }
 
@@ -789,12 +958,13 @@ class EmailValidator implements ValidatorInterface, ConfigurableInterface
     public function removeFromBlocklist(string $domain): self
     {
         $domain = strtolower(trim($domain));
-        $key = array_search($domain, $this->blocklist, true);
-        if ($key !== false) {
-            unset($this->blocklist[$key]);
-            $this->blocklist = array_values($this->blocklist);
-            $this->blocklistIndex = null;
+
+        unset($this->extraBlocklist[$domain]);
+
+        if (isset($this->blocklistIndex[$domain])) {
+            $this->removedBlocklist[$domain] = true;
         }
+
         return $this;
     }
 
@@ -807,23 +977,22 @@ class EmailValidator implements ValidatorInterface, ConfigurableInterface
     public function removeFromAllowlist(string $domain): self
     {
         $domain = strtolower(trim($domain));
-        $key = array_search($domain, $this->allowlist, true);
-        if ($key !== false) {
-            unset($this->allowlist[$key]);
-            $this->allowlist = array_values($this->allowlist);
-            $this->allowlistIndex = null;
-        }
+        unset($this->customAllowlistIndex[$domain], $this->allowlistIndex[$domain]);
         return $this;
     }
 
     /**
-     * Gets the current blocklist.
+     * Gets the current blocklist (base list plus custom and synced domains).
      *
      * @return array<string>
      */
     public function getBlocklist(): array
     {
-        return $this->blocklist;
+        $base = $this->removedBlocklist === []
+            ? array_keys($this->blocklistIndex)
+            : array_keys(array_diff_key($this->blocklistIndex, $this->removedBlocklist));
+
+        return array_map('strval', array_merge($base, array_keys($this->extraBlocklist)));
     }
 
     /**
@@ -833,7 +1002,7 @@ class EmailValidator implements ValidatorInterface, ConfigurableInterface
      */
     public function getAllowlist(): array
     {
-        return $this->allowlist;
+        return array_map('strval', array_keys($this->allowlistIndex + $this->customAllowlistIndex));
     }
 
     /**
@@ -843,7 +1012,7 @@ class EmailValidator implements ValidatorInterface, ConfigurableInterface
      */
     public function getBlocklistCount(): int
     {
-        return count($this->blocklist);
+        return count($this->blocklistIndex) - count($this->removedBlocklist) + count($this->extraBlocklist);
     }
 
     /**
@@ -853,7 +1022,47 @@ class EmailValidator implements ValidatorInterface, ConfigurableInterface
      */
     public function getAllowlistCount(): int
     {
-        return count($this->allowlist);
+        return count($this->allowlistIndex + $this->customAllowlistIndex);
+    }
+
+    /**
+     * Returns statistics about the loaded lists, e.g. for a status page or
+     * the `email-validator stats` command.
+     *
+     * @return array{
+     *     blocklist: int,
+     *     custom: int,
+     *     synced: int,
+     *     total_blocked: int,
+     *     allowlist: int,
+     *     block_subdomains: bool,
+     *     synced_path: string|null,
+     *     last_synced: string|null,
+     *     bundled_generated_at: string|null,
+     *     bundled_sources: array<string>,
+     *     index_strategy: string
+     * }
+     */
+    public function getListStatistics(): array
+    {
+        $sources = array_count_values($this->extraBlocklist);
+        $syncedPath = $this->config->getSyncedBlocklistPath();
+        $syncedAt = $syncedPath !== null && is_file($syncedPath) ? filemtime($syncedPath) : false;
+        $metadata = Fetcher::getMetadata();
+
+        return [
+            'blocklist' => count($this->blocklistIndex) - count($this->removedBlocklist),
+            'custom' => $sources[DisposableCheckResult::SOURCE_CUSTOM] ?? 0,
+            'synced' => $sources[DisposableCheckResult::SOURCE_SYNCED] ?? 0,
+            'total_blocked' => $this->getBlocklistCount(),
+            'allowlist' => $this->getAllowlistCount(),
+            'block_subdomains' => $this->config->isSubdomainBlockingEnabled(),
+            'synced_path' => $syncedPath,
+            'last_synced' => $syncedAt !== false ? date(DATE_ATOM, $syncedAt) : null,
+            'bundled_generated_at' => isset($metadata['generated_at']) ? (string) $metadata['generated_at'] : null,
+            'bundled_sources' => array_keys((array) ($metadata['sources'] ?? [])),
+            'index_strategy' => Fetcher::isOpcacheActive() ? 'opcache' : 'text',
+        ];
     }
 
     /**
@@ -930,6 +1139,31 @@ class EmailValidator implements ValidatorInterface, ConfigurableInterface
     }
 
     // ==================== Private Helper Methods ====================
+
+    /**
+     * Validates the format with egulias/email-validator (RFC 5322).
+     *
+     * @param string $email The email address.
+     * @param bool $strict Reject addresses that are valid but produce RFC warnings.
+     * @return bool
+     * @throws ConfigurationException If egulias/email-validator is not installed.
+     */
+    private function isValidRfcFormat(string $email, bool $strict): bool
+    {
+        if (!class_exists(\Egulias\EmailValidator\EmailValidator::class)) {
+            throw ConfigurationException::invalidValue(
+                'format.mode',
+                $this->config->getFormatMode(),
+                'an installed egulias/email-validator package (composer require egulias/email-validator)'
+            );
+        }
+
+        $validation = $strict
+            ? new \Egulias\EmailValidator\Validation\NoRFCWarningsValidation()
+            : new \Egulias\EmailValidator\Validation\RFCValidation();
+
+        return (new \Egulias\EmailValidator\EmailValidator())->isValid($email, $validation);
+    }
 
     /**
      * Ensures the role-based validator is initialized.

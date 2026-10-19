@@ -1,50 +1,45 @@
 {
     "name": "harungecit/php-email-validator",
-    "description": "A comprehensive PHP email validation library to check format, detect disposable emails, validate MX records, role-based detection, typo suggestions, and support batch validation with configurable cache and rate limiting.",
+    "description": "The most complete email validation and disposable email detection library for PHP: 136,000+ disposable domains (updated daily, false-positive filtered), MX/DNS, RFC & spoof checks, role-based and typo detection, SMTP verification. Framework-agnostic with first-class Laravel, Symfony, CodeIgniter 4, CakePHP, Yii 2/3 and Phalcon integrations.",
     "type": "library",
     "keywords": [
         "email",
+        "email-validation",
+        "email-validator",
+        "email-verification",
         "validation",
         "validator",
         "disposable",
-        "email-validator",
-        "mx-record",
-        "php",
-        "email-verification",
-        "spam-protection",
+        "disposable-email",
+        "disposable-email-domains",
+        "temporary-email",
+        "throwaway-email",
+        "burner-email",
+        "temp-mail",
         "blocklist",
         "allowlist",
+        "mx-record",
+        "dns",
+        "rfc5322",
+        "spoof",
+        "homograph",
         "role-based",
         "typo-suggestion",
         "smtp-verification",
-        "rate-limiting",
-        "configurable"
+        "anti-spam",
+        "fake-signup",
+        "laravel",
+        "symfony",
+        "codeigniter",
+        "cakephp",
+        "yii",
+        "yii2",
+        "yii3",
+        "phalcon",
+        "php"
     ],
     "homepage": "https://github.com/harungecit/php-email-validator",
-    "require": {
-        "php": ">=8.0",
-        "ext-filter": "*",
-        "psr/log": "^1.0|^2.0|^3.0",
-        "psr/simple-cache": "^1.0|^2.0|^3.0"
-    },
-    "require-dev": {
-        "phpunit/phpunit": "^10.0 || ^11.0 || ^12.0",
-        "illuminate/support": "^9.0 || ^10.0 || ^11.0 || ^12.0",
-        "symfony/config": "^6.0 || ^7.0",
-        "symfony/dependency-injection": "^6.0 || ^7.0",
-        "symfony/http-kernel": "^6.0 || ^7.0"
-    },
     "license": "MIT",
-    "autoload": {
-        "psr-4": {
-            "HarunGecit\\EmailValidator\\": "src/"
-        }
-    },
-    "autoload-dev": {
-        "psr-4": {
-            "HarunGecit\\EmailValidator\\Tests\\": "tests/"
-        }
-    },
     "authors": [
         {
             "name": "Harun Geçit",
@@ -55,10 +50,61 @@
     ],
     "support": {
         "issues": "https://github.com/harungecit/php-email-validator/issues",
-        "source": "https://github.com/harungecit/php-email-validator"
+        "source": "https://github.com/harungecit/php-email-validator",
+        "docs": "https://github.com/harungecit/php-email-validator#readme"
     },
-    "minimum-stability": "stable",
-    "prefer-stable": true,
+    "require": {
+        "php": ">=8.0",
+        "ext-filter": "*",
+        "psr/log": "^1.0|^2.0|^3.0",
+        "psr/simple-cache": "^1.0|^2.0|^3.0"
+    },
+    "require-dev": {
+        "cakephp/validation": "^4.4 || ^5.0",
+        "egulias/email-validator": "^3.2 || ^4.0",
+        "illuminate/console": "^9.0 || ^10.0 || ^11.0 || ^12.0 || ^13.0",
+        "illuminate/support": "^9.0 || ^10.0 || ^11.0 || ^12.0 || ^13.0",
+        "illuminate/validation": "^9.0 || ^10.0 || ^11.0 || ^12.0 || ^13.0",
+        "phpunit/phpunit": "^10.0 || ^11.0 || ^12.0",
+        "symfony/config": "^6.0 || ^7.0 || ^8.0",
+        "symfony/console": "^6.0 || ^7.0 || ^8.0",
+        "symfony/dependency-injection": "^6.0 || ^7.0 || ^8.0",
+        "symfony/http-kernel": "^6.0 || ^7.0 || ^8.0",
+        "symfony/validator": "^6.0 || ^7.0 || ^8.0",
+        "yiisoft/validator": "^2.0"
+    },
+    "suggest": {
+        "ext-intl": "Internationalized domain names (IDN) and the spoof (homograph) check",
+        "ext-curl": "Faster and more robust downloads for the list synchronizer (streams are used otherwise)",
+        "egulias/email-validator": "Format modes \"rfc\" and \"strict\" (RFC 5322 parsing)",
+        "ext-redis": "For Redis cache support",
+        "ext-memcached": "For Memcached cache support",
+        "predis/predis": "For Redis cache without ext-redis",
+        "symfony/yaml": "For YAML configuration file support",
+        "illuminate/support": "Laravel integration (service provider, facade, rules, Blade directive, Artisan commands)",
+        "illuminate/view": "Laravel @disposableEmail Blade directive",
+        "symfony/http-kernel": "Symfony bundle integration",
+        "symfony/validator": "Symfony validation constraints (#[NotDisposableEmail], #[ValidEmail])",
+        "symfony/console": "Symfony console commands (email-validator:sync, :stats, :check)",
+        "codeigniter4/framework": "CodeIgniter 4 integration (auto-discovered validation rules and service)",
+        "cakephp/cakephp": "CakePHP integration (validation provider and plugin)",
+        "yiisoft/yii2": "Yii 2 integration (application component and validators)",
+        "yiisoft/validator": "Yii 3 integration (#[NotDisposableEmail] and #[VerifiedEmail] rules)",
+        "ext-phalcon": "Phalcon 5 integration (validators and DI service provider)"
+    },
+    "autoload": {
+        "psr-4": {
+            "HarunGecit\\EmailValidator\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "HarunGecit\\EmailValidator\\Tests\\": "tests/"
+        }
+    },
+    "bin": [
+        "bin/email-validator"
+    ],
     "scripts": {
         "test": "phpunit",
         "test-coverage": "phpunit --coverage-html coverage",
@@ -68,16 +114,8 @@
         "sort-packages": true,
         "optimize-autoloader": true
     },
-    "suggest": {
-        "ext-intl": "For internationalized domain name (IDN) support",
-        "ext-redis": "For Redis cache support",
-        "ext-memcached": "For Memcached cache support",
-        "predis/predis": "For Redis cache without ext-redis",
-        "symfony/yaml": "For YAML configuration file support",
-        "illuminate/support": "To use the Laravel service provider and facade integration",
-        "symfony/http-kernel": "To use the Symfony bundle integration",
-        "symfony/dependency-injection": "To use the Symfony bundle integration"
-    },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
     "extra": {
         "laravel": {
             "providers": [

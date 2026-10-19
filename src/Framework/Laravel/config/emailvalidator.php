@@ -1,5 +1,7 @@
 <?php
 
+use HarunGecit\EmailValidator\Config\Configuration;
+
 return [
     /*
     |--------------------------------------------------------------------------
@@ -19,6 +21,25 @@ return [
         'typo_suggestion' => env('EMAIL_VALIDATOR_CHECK_TYPO', true),
         'subaddress' => env('EMAIL_VALIDATOR_CHECK_SUBADDRESS', false),
         'catch_all' => env('EMAIL_VALIDATOR_CHECK_CATCH_ALL', false),
+        // Detect mixed-script / invisible characters (homograph attacks). Requires ext-intl.
+        'spoof' => env('EMAIL_VALIDATOR_CHECK_SPOOF', false),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Format Validation
+    |--------------------------------------------------------------------------
+    |
+    | How the address format is validated:
+    |
+    | "filter"         PHP's FILTER_VALIDATE_EMAIL (default, ASCII only)
+    | "filter_unicode" FILTER_VALIDATE_EMAIL with internationalized local parts
+    | "rfc"            RFC 5322 parsing (requires egulias/email-validator)
+    | "strict"         RFC 5322 without warnings (requires egulias/email-validator)
+    |
+    */
+    'format' => [
+        'mode' => env('EMAIL_VALIDATOR_FORMAT_MODE', 'filter'),
     ],
 
     /*
@@ -65,17 +86,71 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Custom Lists
+    | Disposable Domain Lists
     |--------------------------------------------------------------------------
     |
-    | Specify custom paths for blocklist, allowlist, and role-based prefix
-    | files. Leave as null to use the package defaults.
+    | blocklist_path / allowlist_path / role_based_path replace the bundled
+    | lists (null = use the package defaults). The custom_* keys add domains
+    | on top of them: inline arrays or files with one domain per line (or a
+    | JSON array). The allowlist always wins over the blocklists.
+    |
+    | synced_blocklist_path is the file written by
+    | `php artisan email-validator:sync`; its domains are blocked in addition
+    | to the bundled list. Set it to null to disable the synced list.
+    |
+    | block_subdomains also blocks subdomains of listed domains
+    | (e.g. "eu.mailinator.com" when "mailinator.com" is listed).
     |
     */
     'lists' => [
         'blocklist_path' => null,
         'allowlist_path' => null,
         'role_based_path' => null,
+
+        'custom_blocklist' => [
+            // 'my-throwaway-domain.com',
+        ],
+        'custom_allowlist' => [
+            // 'my-company.com',
+        ],
+        'custom_blocklist_paths' => [
+            // storage_path('app/email-validator/blocklist.txt'),
+        ],
+        'custom_allowlist_paths' => [
+            // storage_path('app/email-validator/allowlist.txt'),
+        ],
+
+        'synced_blocklist_path' => env(
+            'EMAIL_VALIDATOR_SYNCED_BLOCKLIST_PATH',
+            storage_path('app/email-validator/synced-blocklist.txt')
+        ),
+
+        'block_subdomains' => env('EMAIL_VALIDATOR_BLOCK_SUBDOMAINS', true),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Remote List Synchronization
+    |--------------------------------------------------------------------------
+    |
+    | `php artisan email-validator:sync` downloads these lists (plain text or
+    | JSON) into lists.synced_blocklist_path, so new disposable domains are
+    | blocked without waiting for a package release. The default source is
+    | this package's own list, refreshed daily. Override with a comma-separated
+    | EMAIL_VALIDATOR_SYNC_URLS.
+    |
+    | schedule: null (disabled), "hourly", "daily", "weekly", "monthly" or a
+    | cron expression. When set, the sync command is registered on Laravel's
+    | scheduler automatically (make sure `php artisan schedule:run` runs).
+    |
+    */
+    'sync' => [
+        'urls' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('EMAIL_VALIDATOR_SYNC_URLS', Configuration::DEFAULT_SYNC_URL))
+        ))),
+        'timeout' => env('EMAIL_VALIDATOR_SYNC_TIMEOUT', 30),
+        'schedule' => env('EMAIL_VALIDATOR_SYNC_SCHEDULE'),
     ],
 
     /*
@@ -113,12 +188,19 @@ return [
         'common_domains' => [
             'gmail.com', 'googlemail.com', 'yahoo.com', 'hotmail.com', 'outlook.com',
             'icloud.com', 'aol.com', 'protonmail.com', 'proton.me', 'pm.me',
-            'mail.com', 'yandex.com', 'zoho.com', 'gmx.com', 'fastmail.com',
+            'mail.com', 'yandex.com', 'yandex.ru', 'zoho.com', 'zohomail.com',
+            'gmx.com', 'gmx.de', 'gmx.net', 'fastmail.com',
             'live.com', 'msn.com', 'me.com', 'mac.com',
             'hey.com', 'tuta.com', 'tutanota.com',
+            'yahoo.co.uk', 'hotmail.co.uk', 'btinternet.com',
+            'yahoo.fr', 'orange.fr', 'free.fr',
+            'web.de', 't-online.de',
+            'yahoo.de', 'yahoo.es', 'yahoo.it',
+            'hotmail.fr', 'hotmail.de', 'hotmail.es', 'hotmail.it',
+            'outlook.fr', 'outlook.de', 'outlook.es', 'outlook.it',
         ],
         'mappings' => [
-            // Add custom typo => correct mappings here
+            // Additional typo => correct mappings (merged with the built-in ones)
             // 'gmial.com' => 'gmail.com',
         ],
     ],
@@ -135,7 +217,7 @@ return [
     'smtp' => [
         'timeout' => env('EMAIL_VALIDATOR_SMTP_TIMEOUT', 10),
         'from_email' => env('MAIL_FROM_ADDRESS', 'verify@example.com'),
-        'from_domain' => env('MAIL_FROM_NAME', null),
+        'from_domain' => env('EMAIL_VALIDATOR_SMTP_FROM_DOMAIN'),
     ],
 
     /*

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace HarunGecit\EmailValidator\Config;
 
 use HarunGecit\EmailValidator\Exceptions\ConfigurationException;
+use HarunGecit\EmailValidator\Support\Domain;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -26,6 +27,27 @@ class Configuration
     protected bool $checkTypos = false;
     protected bool $checkSubaddress = false;
     protected bool $checkCatchAll = false;
+    protected bool $checkSpoof = false;
+
+    /**
+     * Supported format validation modes.
+     *
+     * - filter:         PHP's FILTER_VALIDATE_EMAIL (default, ASCII only)
+     * - filter_unicode: FILTER_VALIDATE_EMAIL with FILTER_FLAG_EMAIL_UNICODE (internationalized local parts)
+     * - rfc:            RFC 5322 parsing via egulias/email-validator (RFCValidation)
+     * - strict:         RFC 5322 without warnings via egulias/email-validator (NoRFCWarningsValidation)
+     */
+    public const FORMAT_MODES = ['filter', 'filter_unicode', 'rfc', 'strict'];
+
+    /**
+     * Default remote list used by the synchronizer: this package's own
+     * blocklist on the main branch, already merged from all upstream sources
+     * and filtered for false positives. It is refreshed daily.
+     */
+    public const DEFAULT_SYNC_URL = 'https://raw.githubusercontent.com/harungecit/php-email-validator/main/data/blocklist.conf';
+
+    // Format validation
+    protected string $formatMode = 'filter';
 
     // Cache settings
     protected string $cacheDriver = 'memory';
@@ -43,6 +65,23 @@ class Configuration
     protected ?string $blocklistPath = null;
     protected ?string $allowlistPath = null;
     protected ?string $roleBasedPath = null;
+
+    // Additional lists (merged with the bundled/configured ones)
+    /** @var array<string> */
+    protected array $customBlocklist = [];
+    /** @var array<string> */
+    protected array $customAllowlist = [];
+    /** @var array<string> */
+    protected array $customBlocklistPaths = [];
+    /** @var array<string> */
+    protected array $customAllowlistPaths = [];
+    protected ?string $syncedBlocklistPath = null;
+    protected bool $blockSubdomains = true;
+
+    // Remote list synchronization
+    /** @var array<string> */
+    protected array $syncUrls = [self::DEFAULT_SYNC_URL];
+    protected int $syncTimeout = 30;
 
     // Role-based prefixes
     /** @var array<string> */
@@ -247,6 +286,43 @@ class Configuration
         return $this;
     }
 
+    public function isSpoofCheckEnabled(): bool
+    {
+        return $this->checkSpoof;
+    }
+
+    /**
+     * Enables detection of visually deceptive (homograph / mixed-script)
+     * addresses. Requires ext-intl; skipped with a warning when unavailable.
+     */
+    public function enableSpoofCheck(bool $enable = true): self
+    {
+        $this->checkSpoof = $enable;
+        return $this;
+    }
+
+    // ==================== Format Mode Methods ====================
+
+    public function getFormatMode(): string
+    {
+        return $this->formatMode;
+    }
+
+    /**
+     * Sets how the email format is validated (see FORMAT_MODES).
+     *
+     * @throws ConfigurationException If the mode is not supported.
+     */
+    public function setFormatMode(string $mode): self
+    {
+        $mode = strtolower(trim($mode));
+        if (!in_array($mode, self::FORMAT_MODES, true)) {
+            throw ConfigurationException::invalidValue('format.mode', $mode, implode('|', self::FORMAT_MODES));
+        }
+        $this->formatMode = $mode;
+        return $this;
+    }
+
     // ==================== Cache Methods ====================
 
     public function getCacheDriver(): string
@@ -370,6 +446,156 @@ class Configuration
     public function setRoleBasedPath(?string $path): self
     {
         $this->roleBasedPath = $path;
+        return $this;
+    }
+
+    // ==================== Additional List Methods ====================
+
+    /**
+     * @return array<string>
+     */
+    public function getCustomBlocklist(): array
+    {
+        return $this->customBlocklist;
+    }
+
+    /**
+     * Domains to block in addition to the bundled/configured blocklist.
+     *
+     * @param array<string> $domains
+     */
+    public function setCustomBlocklist(array $domains): self
+    {
+        $this->customBlocklist = self::normalizeDomains($domains);
+        return $this;
+    }
+
+    /**
+     * @return array<string>
+     */
+    public function getCustomAllowlist(): array
+    {
+        return $this->customAllowlist;
+    }
+
+    /**
+     * Domains to always allow, in addition to the bundled/configured allowlist.
+     *
+     * @param array<string> $domains
+     */
+    public function setCustomAllowlist(array $domains): self
+    {
+        $this->customAllowlist = self::normalizeDomains($domains);
+        return $this;
+    }
+
+    /**
+     * @return array<string>
+     */
+    public function getCustomBlocklistPaths(): array
+    {
+        return $this->customBlocklistPaths;
+    }
+
+    /**
+     * Extra blocklist files or directories (*.conf, *.txt, *.list, *.json),
+     * merged with the bundled/configured blocklist.
+     *
+     * @param array<string>|string $paths
+     */
+    public function setCustomBlocklistPaths(array|string $paths): self
+    {
+        $this->customBlocklistPaths = self::normalizePaths($paths);
+        return $this;
+    }
+
+    /**
+     * @return array<string>
+     */
+    public function getCustomAllowlistPaths(): array
+    {
+        return $this->customAllowlistPaths;
+    }
+
+    /**
+     * Extra allowlist files or directories, merged with the bundled/configured allowlist.
+     *
+     * @param array<string>|string $paths
+     */
+    public function setCustomAllowlistPaths(array|string $paths): self
+    {
+        $this->customAllowlistPaths = self::normalizePaths($paths);
+        return $this;
+    }
+
+    public function getSyncedBlocklistPath(): ?string
+    {
+        return $this->syncedBlocklistPath;
+    }
+
+    /**
+     * File where the list synchronizer stores downloaded domains. When set and
+     * the file exists, its domains are blocked in addition to the bundled list.
+     */
+    public function setSyncedBlocklistPath(?string $path): self
+    {
+        $this->syncedBlocklistPath = $path === '' ? null : $path;
+        return $this;
+    }
+
+    public function isSubdomainBlockingEnabled(): bool
+    {
+        return $this->blockSubdomains;
+    }
+
+    /**
+     * When enabled (default), a listed domain also matches its subdomains:
+     * "mailinator.com" blocks "user@eu.mailinator.com", and an allowlisted
+     * domain allows its subdomains.
+     */
+    public function enableSubdomainBlocking(bool $enable = true): self
+    {
+        $this->blockSubdomains = $enable;
+        return $this;
+    }
+
+    // ==================== Sync Methods ====================
+
+    /**
+     * @return array<string>
+     */
+    public function getSyncUrls(): array
+    {
+        return $this->syncUrls;
+    }
+
+    /**
+     * Remote lists (plain text or JSON) downloaded by the synchronizer.
+     * Only http(s) URLs are accepted; anything else is ignored.
+     *
+     * @param array<string>|string $urls
+     */
+    public function setSyncUrls(array|string $urls): self
+    {
+        $valid = [];
+        foreach ((array) $urls as $url) {
+            $url = trim((string) $url);
+            if (filter_var($url, FILTER_VALIDATE_URL) !== false && preg_match('#^https?://#i', $url) === 1) {
+                $valid[$url] = true;
+            }
+        }
+        $this->syncUrls = array_keys($valid);
+        return $this;
+    }
+
+    public function getSyncTimeout(): int
+    {
+        return $this->syncTimeout;
+    }
+
+    public function setSyncTimeout(int $seconds): self
+    {
+        $this->syncTimeout = max(1, $seconds);
         return $this;
     }
 
@@ -566,6 +792,14 @@ class Configuration
             if (isset($checks['catch_all'])) {
                 $instance->enableCatchAllCheck((bool) $checks['catch_all']);
             }
+            if (isset($checks['spoof'])) {
+                $instance->enableSpoofCheck((bool) $checks['spoof']);
+            }
+        }
+
+        // Format settings
+        if (isset($config['format']['mode'])) {
+            $instance->setFormatMode((string) $config['format']['mode']);
         }
 
         // Cache settings
@@ -610,6 +844,35 @@ class Configuration
             }
             if (isset($lists['role_based_path'])) {
                 $instance->setRoleBasedPath($lists['role_based_path']);
+            }
+            if (isset($lists['custom_blocklist']) && is_array($lists['custom_blocklist'])) {
+                $instance->setCustomBlocklist($lists['custom_blocklist']);
+            }
+            if (isset($lists['custom_allowlist']) && is_array($lists['custom_allowlist'])) {
+                $instance->setCustomAllowlist($lists['custom_allowlist']);
+            }
+            if (isset($lists['custom_blocklist_paths'])) {
+                $instance->setCustomBlocklistPaths($lists['custom_blocklist_paths']);
+            }
+            if (isset($lists['custom_allowlist_paths'])) {
+                $instance->setCustomAllowlistPaths($lists['custom_allowlist_paths']);
+            }
+            if (isset($lists['synced_blocklist_path'])) {
+                $instance->setSyncedBlocklistPath((string) $lists['synced_blocklist_path']);
+            }
+            if (isset($lists['block_subdomains'])) {
+                $instance->enableSubdomainBlocking((bool) $lists['block_subdomains']);
+            }
+        }
+
+        // Remote list synchronization
+        if (isset($config['sync'])) {
+            $sync = $config['sync'];
+            if (isset($sync['urls'])) {
+                $instance->setSyncUrls($sync['urls']);
+            }
+            if (isset($sync['timeout'])) {
+                $instance->setSyncTimeout((int) $sync['timeout']);
             }
         }
 
@@ -686,6 +949,10 @@ class Configuration
                 'typo_suggestion' => $this->checkTypos,
                 'subaddress' => $this->checkSubaddress,
                 'catch_all' => $this->checkCatchAll,
+                'spoof' => $this->checkSpoof,
+            ],
+            'format' => [
+                'mode' => $this->formatMode,
             ],
             'cache' => [
                 'driver' => $this->cacheDriver,
@@ -702,6 +969,16 @@ class Configuration
                 'blocklist_path' => $this->blocklistPath,
                 'allowlist_path' => $this->allowlistPath,
                 'role_based_path' => $this->roleBasedPath,
+                'custom_blocklist' => $this->customBlocklist,
+                'custom_allowlist' => $this->customAllowlist,
+                'custom_blocklist_paths' => $this->customBlocklistPaths,
+                'custom_allowlist_paths' => $this->customAllowlistPaths,
+                'synced_blocklist_path' => $this->syncedBlocklistPath,
+                'block_subdomains' => $this->blockSubdomains,
+            ],
+            'sync' => [
+                'urls' => $this->syncUrls,
+                'timeout' => $this->syncTimeout,
             ],
             'role_based' => [
                 'prefixes' => $this->roleBasedPrefixes,
@@ -719,5 +996,41 @@ class Configuration
                 'timeout' => $this->dnsTimeout,
             ],
         ];
+    }
+
+    /**
+     * Normalizes a list of domains (trim, lowercase, no trailing dot, no duplicates).
+     *
+     * @param array<mixed> $domains
+     * @return array<string>
+     */
+    private static function normalizeDomains(array $domains): array
+    {
+        $normalized = [];
+        foreach ($domains as $domain) {
+            if (!is_string($domain)) {
+                continue;
+            }
+            $domain = Domain::normalize($domain);
+            if ($domain !== null) {
+                $normalized[$domain] = true;
+            }
+        }
+        return array_keys($normalized);
+    }
+
+    /**
+     * @param array<mixed>|string $paths
+     * @return array<string>
+     */
+    private static function normalizePaths(array|string $paths): array
+    {
+        $normalized = [];
+        foreach ((array) $paths as $path) {
+            if (is_string($path) && trim($path) !== '') {
+                $normalized[] = trim($path);
+            }
+        }
+        return array_values(array_unique($normalized));
     }
 }

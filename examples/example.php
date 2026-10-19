@@ -223,6 +223,54 @@ echo "Total allowlist domains: " . Fetcher::getAllowlistCount() . "\n";
 $lists = Fetcher::loadAll();
 echo "Loaded both lists: blocklist(" . count($lists['blocklist']) . "), allowlist(" . count($lists['allowlist']) . ")\n";
 
+// ================================================
+// Explaining a disposable match
+// ================================================
+echo "\n\n12. WHY IS IT DISPOSABLE? (checkDisposable)\n";
+echo "-------------------------------------------\n";
+
+$validator = EmailValidator::create();
+
+foreach (['user@eu.mailinator.com', 'yopmail.com', 'user@163.com', 'user@gmail.com'] as $input) {
+    $check = $validator->checkDisposable($input);
+    printf(
+        "%-24s disposable=%-5s matched=%-16s source=%s\n",
+        $input,
+        $check->isDisposable() ? 'yes' : 'no',
+        $check->getMatchedDomain() ?? '-',
+        $check->getSource() ?? '-'
+    );
+}
+
+// ================================================
+// Application lists, subdomain matching, format modes
+// ================================================
+echo "\n\n13. CONFIGURED LISTS AND MODES\n";
+echo "------------------------------\n";
+
+$config = HarunGecit\EmailValidator\Config\ConfigurationBuilder::create()
+    ->basic()
+    ->withCustomBlocklist(['competitor-trials.example'])  // block on top of the bundled list
+    ->withCustomAllowlist(['partner.mailinator.com'])     // allow despite the bundled list
+    ->withFormatMode('filter_unicode')                    // accept internationalized local parts
+    ->withSpoofCheck()                                    // flag homograph / mixed-script addresses
+    ->build();
+
+$validator = EmailValidator::withConfig($config);
+
+foreach (['a@competitor-trials.example', 'a@partner.mailinator.com', 'jörg@example.com', 'user@xn--gmil-63d.com'] as $email) {
+    $result = $validator->validate($email);
+    echo str_pad($email, 28) . ($result->isValid() ? 'valid' : 'invalid: ' . implode(', ', $result->getErrors())) . "\n";
+}
+
+$stats = $validator->getListStatistics();
+echo "\nBlocked domains: " . number_format($stats['total_blocked'])
+    . " (custom: {$stats['custom']}, synced: {$stats['synced']}), lookup index: {$stats['index_strategy']}\n";
+
+// Keeping the list fresh between releases (needs network access):
+//   vendor/bin/email-validator sync --path=var/email-validator/synced-blocklist.txt
+// then ->withSyncedBlocklist('var/email-validator/synced-blocklist.txt') in your configuration.
+
 echo "\n===========================================\n";
 echo "           Examples Complete!\n";
 echo "===========================================\n";

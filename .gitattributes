@@ -4,3 +4,18 @@
 *.php text
 *.json text
 *.md text
+/bin/email-validator text eol=lf
+
+# The compiled list index is generated; collapse it in diffs and stats.
+/data/blocklist.php linguist-generated=true -diff
+/data/metadata.json linguist-generated=true
+
+# Keep the Composer dist archive lean: development files are not shipped.
+/.claude export-ignore
+/.github export-ignore
+/.idea export-ignore
+/.gitattributes export-ignore
+/.gitignore export-ignore
+/phpunit.xml.dist export-ignore
+/scripts export-ignore
+/tests export-ignore

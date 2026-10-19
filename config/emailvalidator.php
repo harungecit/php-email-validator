@@ -28,6 +28,22 @@ return [
         'typo_suggestion' => true,  // Suggest corrections for typos
         'subaddress' => false,      // Detect plus-addressing (user+tag@)
         'catch_all' => false,       // Detect catch-all domains
+        'spoof' => false,           // Detect homograph / mixed-script addresses (needs ext-intl)
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Format Validation
+    |--------------------------------------------------------------------------
+    |
+    | "filter"         FILTER_VALIDATE_EMAIL (default)
+    | "filter_unicode" FILTER_VALIDATE_EMAIL + FILTER_FLAG_EMAIL_UNICODE
+    | "rfc"            RFC 5322 (requires egulias/email-validator)
+    | "strict"         RFC 5322 without warnings (requires egulias/email-validator)
+    |
+    */
+    'format' => [
+        'mode' => 'filter',
     ],
 
     /*
@@ -79,14 +95,38 @@ return [
     | Custom Lists
     |--------------------------------------------------------------------------
     |
-    | Specify custom paths for blocklist and allowlist files.
-    | Leave as null to use package defaults.
+    | blocklist_path / allowlist_path REPLACE the bundled lists (null = bundled).
+    | The custom_* keys ADD to them. Precedence on each domain level: your
+    | allowlist > your blocklist > bundled allowlist > bundled/synced blocklist.
     |
     */
     'lists' => [
         'blocklist_path' => null,
         'allowlist_path' => null,
         'role_based_path' => null,
+        'custom_blocklist' => [],          // e.g. ['spam-corp.example']
+        'custom_allowlist' => [],          // e.g. ['partner.example']
+        'custom_blocklist_paths' => [],    // files or directories (*.conf, *.txt, *.list, *.json)
+        'custom_allowlist_paths' => [],
+        'synced_blocklist_path' => null,   // file written by `email-validator sync`
+        'block_subdomains' => true,        // "mailinator.com" also blocks "eu.mailinator.com"
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Remote List Synchronization
+    |--------------------------------------------------------------------------
+    |
+    | Sources downloaded by `vendor/bin/email-validator sync` into
+    | lists.synced_blocklist_path. The default is this package's own list,
+    | rebuilt daily from all upstream sources and false-positive filtered.
+    |
+    */
+    'sync' => [
+        'urls' => [
+            'https://raw.githubusercontent.com/harungecit/php-email-validator/main/data/blocklist.conf',
+        ],
+        'timeout' => 30,
     ],
 
     /*

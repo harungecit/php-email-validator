@@ -77,16 +77,26 @@ jobs:
       - name: Install runtime dependencies only
         run: composer update --no-dev --ignore-platform-reqs --no-progress --prefer-dist
 
+      # xargs (unlike find -exec ... \;) propagates a failing `php -l`.
       - name: Check PHP syntax (runtime sources)
-        run: find src -name "*.php" -not -path "src/Framework/*" -exec php -l {} \;
+        run: |
+          find src -name "*.php" -not -path "src/Framework/*" -print0 | xargs -0 -n1 php -l
+          php -l bin/email-validator
 
       - name: Smoke test autoload
         run: |
           php -r 'require "vendor/autoload.php";
             $v = new HarunGecit\EmailValidator\EmailValidator();
             $count = count(HarunGecit\EmailValidator\Fetcher::loadBlocklist());
-            if ($count < 1) { fwrite(STDERR, "blocklist empty\n"); exit(1); }
+            if ($count < 100000) { fwrite(STDERR, "blocklist too small: {$count}\n"); exit(1); }
+            if (!$v->checkDisposable("user@eu.mailinator.com")->isDisposable()) { fwrite(STDERR, "detection failed\n"); exit(1); }
             echo "OK: EmailValidator loads on PHP " . PHP_VERSION . ", blocklist has {$count} domains\n";'
+
+      - name: Smoke test CLI
+        run: |
+          php bin/email-validator stats
+          php bin/email-validator check user@gmail.com
+          if php bin/email-validator check user@mailinator.com; then echo "expected exit code 1" >&2; exit 1; fi
 
   code-quality:
     name: Code Quality
@@ -107,4 +117,14 @@ jobs:
         run: composer update --no-progress --prefer-dist
 
       - name: Check PHP syntax
-        run: find src tests -name "*.php" -exec php -l {} \;
+        run: |
+          find src tests scripts -name "*.php" -print0 | xargs -0 -n1 php -l
+          php -l bin/email-validator
+
+      - name: Validate bundled data
+        run: |
+          test "$(grep -c . data/blocklist.conf)" -gt 100000
+          php -r '$index = require "data/blocklist.php";
+            $count = count(file("data/blocklist.conf", FILE_SKIP_EMPTY_LINES));
+            if (count($index) !== $count) { fwrite(STDERR, "data/blocklist.php is out of sync\n"); exit(1); }
+            echo "Compiled index OK ({$count} domains)\n";'
