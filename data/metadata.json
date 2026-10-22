@@ -1,6 +1,6 @@
 {
-    "generated_at": "2026-10-21T08:34:03Z",
-    "total": 136667,
+    "generated_at": "2026-10-22T08:36:18Z",
+    "total": 136707,
     "allowlist": 237,
     "local_additions": 7,
     "sources": {
@@ -8,21 +8,21 @@
             "url": "https://raw.githubusercontent.com/disposable-email-domains/disposable-email-domains/main/disposable_email_blocklist.conf",
             "homepage": "https://github.com/disposable-email-domains/disposable-email-domains",
             "trusted": true,
-            "entries": 9913,
-            "included": 9913
+            "entries": 9917,
+            "included": 9917
         },
         "eramitgupta/disposable-email": {
             "url": "https://raw.githubusercontent.com/eramitgupta/disposable-email/main/disposable_email.txt",
             "homepage": "https://github.com/eramitgupta/disposable-email",
             "trusted": false,
-            "entries": 136890,
-            "included": 136664
+            "entries": 136927,
+            "included": 136701
         }
     },
     "filtered": {
-        "public_suffix": 32,
+        "public_suffix": 31,
         "allowlisted": 88,
-        "popular": 74,
+        "popular": 75,
         "typo": 23,
         "artifact": 9
     },
