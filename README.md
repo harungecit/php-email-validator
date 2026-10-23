@@ -12,7 +12,7 @@ One package for Laravel, Symfony, CodeIgniter 4, CakePHP, Yii 2, Yii 3, Phalcon 
 [![List Updates](https://img.shields.io/github/actions/workflow/status/harungecit/php-email-validator/update-lists.yml?branch=main&style=flat-square&logo=github&logoColor=white&label=daily%20list%20update)](https://github.com/harungecit/php-email-validator/actions/workflows/update-lists.yml)
 [![License](https://img.shields.io/packagist/l/harungecit/php-email-validator?style=flat-square&logo=opensource&logoColor=white)](LICENSE)
 
-[![Blocklist Domains](https://img.shields.io/badge/blocklist-136,700%2B%20domains-red?style=flat-square&logo=shield&logoColor=white)](#-the-disposable-domain-list)
+[![Blocklist Domains](https://img.shields.io/badge/blocklist-137,400%2B%20domains-red?style=flat-square&logo=shield&logoColor=white)](#-the-disposable-domain-list)
 [![Frameworks](https://img.shields.io/badge/frameworks-Laravel%20%7C%20Symfony%20%7C%20CodeIgniter%20%7C%20CakePHP%20%7C%20Yii%20%7C%20Phalcon-blue?style=flat-square)](#-framework-integrations)
 [![Platform Support](https://img.shields.io/badge/platform-Linux%20%7C%20Windows%20%7C%20macOS-blue?style=flat-square)](#compatibility)
 
@@ -28,7 +28,7 @@ $validator->checkDisposable('x@eu.mailinator.com')       // explains *why*:
 $validator->validate('john@gmial.com')->getSuggestion(); // 'john@gmail.com' (with typo suggestions on)
 ```
 
-- **136,700+ disposable domains** from multiple sources — rebuilt **daily**, released weekly, and **false-positive filtered** (no `namecheap.com`, no `yandex.net`, no ISP domains, no public suffixes).
+- **137,400+ disposable domains** from multiple sources — rebuilt **daily**, released weekly, and **false-positive filtered** (no `namecheap.com`, no `yandex.net`, no ISP domains, no public suffixes).
 - **Explainable results** — which list entry matched, whether through a subdomain, and from which list.
 - **A full validation pipeline**, not just a blocklist — RFC format modes, MX/DNS, homograph spoofing, role accounts, plus-addressing, typo suggestions, SMTP and catch-all.
 - **Every PHP framework, natively** — validation rules, constraints, services and commands that feel at home in each framework.
@@ -60,7 +60,7 @@ $validator->validate('john@gmial.com')->getSuggestion(); // 'john@gmail.com' (wi
 
 | | **php-email-validator** | Typical disposable-list package |
 |---|---|---|
-| Disposable domains | **136,700+ disposable domains**, multi-source, daily rebuild | one source, a few thousand to ~100k |
+| Disposable domains | **137,400+ disposable domains**, multi-source, daily rebuild | one source, a few thousand to ~100k |
 | False-positive protection | Public Suffix List, popularity, typo & allowlist filters, regression tests | none — aggregated feeds are merged blindly |
 | Subdomain detection (`x.mailinator.com`) | ✅ (configurable) | sometimes |
 | Explains matches (entry + source) | ✅ `checkDisposable()` | rarely |
