@@ -1,6 +1,6 @@
 {
-    "generated_at": "2026-10-30T10:00:20Z",
-    "total": 137807,
+    "generated_at": "2026-10-31T09:38:19Z",
+    "total": 137842,
     "allowlist": 237,
     "local_additions": 7,
     "sources": {
@@ -15,8 +15,8 @@
             "url": "https://raw.githubusercontent.com/eramitgupta/disposable-email/main/disposable_email.txt",
             "homepage": "https://github.com/eramitgupta/disposable-email",
             "trusted": false,
-            "entries": 137910,
-            "included": 137684
+            "entries": 138065,
+            "included": 137839
         }
     },
     "filtered": {
